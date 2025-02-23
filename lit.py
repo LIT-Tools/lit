@@ -63,8 +63,8 @@ class WorklogManager:
     def _save(self):
         try:
             with open(LOG_FILE, 'w', encoding='utf-8') as f:
-                f.write("\n".join(self.entries))
-            print("Файл успешно сохранён.")
+                f.write("\n".join(self.entries) + "\n")  # Добавить + "\n"
+            # print("Файл успешно сохранён.")
         except Exception as e:
             print(f"Ошибка при сохранении: {e}")
 
@@ -94,7 +94,7 @@ class WorklogManager:
             )
             self.entries.append(entry)
             self._save()
-            print(f"Запись добавлена! Файл: {LOG_FILE}")
+            # print(f"Запись добавлена! Файл: {LOG_FILE}")
 
         except Exception as e:
             print(f"Ошибка: {str(e)}")
