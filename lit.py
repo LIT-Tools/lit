@@ -6,7 +6,7 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
 
 # Конфигурация
-LOG_FILE = os.path.expanduser("~/.litlog")
+LOG_FILE = os.path.join(os.path.expanduser("~"), ".litlog")
 TASKS = {
     'SOGAZ-123': 'добавить кнопку',
     'SOGAZ-44': 'настройка сборки фронта',
@@ -54,15 +54,21 @@ class WorklogManager:
 
     def _load(self):
         if os.path.exists(LOG_FILE):
-            with open(LOG_FILE, 'r', encoding='utf-8') as f:
-                self.entries = [line.strip() for line in f.readlines() if line.strip()]
+            try:
+                with open(LOG_FILE, 'r', encoding='utf-8') as f:
+                    self.entries = [line.strip() for line in f.readlines() if line.strip()]
+            except Exception as e:
+                print(f"Ошибка при загрузке: {e}")
 
     def _save(self):
-        with open(LOG_FILE, 'w', encoding='utf-8') as f:
-            f.write("\n".join(self.entries))
+        try:
+            with open(LOG_FILE, 'w', encoding='utf-8') as f:
+                f.write("\n".join(self.entries))
+            print("Файл успешно сохранён.")
+        except Exception as e:
+            print(f"Ошибка при сохранении: {e}")
 
     def add_entry(self, args):
-        # Парсинг аргументов
         parser = argparse.ArgumentParser(prog='lit add', exit_on_error=False)
         self._configure_add_parser(parser)
 
@@ -88,14 +94,14 @@ class WorklogManager:
             )
             self.entries.append(entry)
             self._save()
-            print("Запись добавлена!")
+            print(f"Запись добавлена! Файл: {LOG_FILE}")
 
         except Exception as e:
             print(f"Ошибка: {str(e)}")
 
-    def show_status(self, push=False):
+    def show_status(self):
         if not self.entries:
-            print("Нет подготовленных записей для отправки.")
+            print("Нет подготовленных записей.")
             return
 
         current_date = None
@@ -106,12 +112,22 @@ class WorklogManager:
                 current_date = date_part
             print(f"  {entry.split('] ')[1]}")
 
-        if push:
+    def push_entries(self):
+        if not self.entries:
+            print("Нет записей для отправки.")
+            return
+
+        self.show_status()
+        confirm = input("\nВы уверены что хотите отправить эти записи? [y/N]: ").strip().lower()
+
+        if confirm == 'y':
             print("\nОтправка записей в Jira...")
             # Здесь должна быть логика интеграции с Jira API
             self.entries = []
             self._save()
             print("Записи успешно отправлены!")
+        else:
+            print("Отмена отправки.")
 
     @staticmethod
     def _configure_add_parser(parser):
@@ -141,8 +157,8 @@ def main():
                     manager.add_entry(args[1:])
                 elif command == 'status':
                     manager.show_status()
-                elif 'push' in args:
-                    manager.show_status(push=True)
+                elif command == 'push':
+                    manager.push_entries()
                 else:
                     print("Неизвестная команда")
 
@@ -162,11 +178,12 @@ if __name__ == '__main__':
     WorklogManager._configure_add_parser(add_parser)
 
     # Парсер для команды status
-    status_parser = subparsers.add_parser('status', help='Показать статус ворклога')
-    status_parser.add_argument('--push', action='store_true', help='Отправить записи в Jira')
+    subparsers.add_parser('status', help='Показать статус ворклога')
+
+    # Парсер для команды push
+    subparsers.add_parser('push', help='Отправить записи в Jira')
 
     args = parser.parse_args()
-
     manager = WorklogManager()
 
     if args.command == 'add':
@@ -181,6 +198,8 @@ if __name__ == '__main__':
                 add_args.extend([f'--{key}', str(value)])
         manager.add_entry(add_args)
     elif args.command == 'status':
-        manager.show_status(push=args.push)
+        manager.show_status()
+    elif args.command == 'push':
+        manager.push_entries()
     else:
         main()
