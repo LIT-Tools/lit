@@ -42,6 +42,19 @@ class TestWorklogManager(unittest.TestCase):
 
     @patch('lit.datetime')
     @patch('builtins.open', new_callable=mock_open)
+    def test_full_add_command_success(self, mock_file, mock_datetime):
+        mock_datetime.side_effect = lambda *args, **kw: self.MockedDateTime(*args, **kw)
+        mock_datetime.now.return_value = self.MockedDateTime.now()
+        mock_datetime.strptime.side_effect = lambda *args: datetime.strptime(*args)
+
+        args = ['-c', 'SOGAZ-123', '-l', '7', '-m', 'Описание работы', '-d', '20.02.2024', '-t', '10:00']
+        self.manager.add_entry(args)
+
+        expected_entry = "20.02.2024 [10:00 - 17:00] SOGAZ-123 7.0h `Описание работы`\n"
+        mock_file().write.assert_called_once_with(expected_entry)
+
+    @patch('lit.datetime')
+    @patch('builtins.open', new_callable=mock_open)
     def test_two_entries_success(self, mock_file, mock_datetime):
         mock_datetime.side_effect = lambda *args, **kw: self.MockedDateTime(*args, **kw)
         mock_datetime.now.return_value = self.MockedDateTime.now()
