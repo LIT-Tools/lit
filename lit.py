@@ -126,9 +126,13 @@ class WorklogManager:
             opts = parser.parse_args(args)
 
         try:
-            # Валидация
+            # Проверка формата кода задачи
+            if not re.match(r'^[A-Z]{2,}-\d+$', opts.code):
+                raise ValueError(f"Неверный формат кода задачи: {opts.code}. Ожидается формат: ABC-123")
+
+            # Проверка существования задачи в системе
             if opts.code not in TASKS:
-                raise ValueError(f"Неизвестный код задачи: {opts.code}")
+                print(f"⚠️ Внимание: Задача {opts.code} не найдена в системе. Запись будет создана с ручным вводом!")
 
             # Расчет времени окончания
             start_time = datetime.strptime(f"{opts.date} {opts.time}", "%d.%m.%Y %H:%M")
@@ -144,7 +148,7 @@ class WorklogManager:
             # print(f"Запись добавлена! Файл: {LOG_FILE}")
 
         except Exception as e:
-            print(f"Ошибка: {str(e)}")
+            print(f"⛔ Ошибка: {str(e)}")
 
     def show_status(self):
         if not self.entries:
