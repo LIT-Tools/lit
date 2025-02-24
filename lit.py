@@ -24,27 +24,50 @@ class WorklogCompleter(Completer):
                 yield Completion(cmd, start_position=0, display=cmd)
             return
 
-        # Автодополнение параметров для add
+        # Автодополнение для команды add
         if text[0] == 'add':
-            params = {
-                '-c': 'Код задачи',
-                '-l': 'Часы',
-                '-m': 'Сообщение',
-                '-d': 'Дата (дд.мм.гггг)',
-                '-t': 'Время (чч:мм)'
-            }
+            args_after_add = text[1:]
+            num_args = len(args_after_add)
+            has_flags = any(arg.startswith('-') for arg in args_after_add)
 
-            # Предлагаем параметры или значения
-            if len(text) == 1:
-                for param, desc in params.items():
-                    yield Completion(param, start_position=0, display=f"{param} - {desc}")
+            # Обработка позиционных аргументов (code, hours, message)
+            if not has_flags:
+                if num_args == 0:
+                    # Предлагаем все коды задач
+                    for task in TASKS:
+                        yield Completion(task, start_position=0, display=f"{task} - {TASKS[task]}")
+                elif num_args == 1:
+                    # Предлагаем коды задач, начинающиеся с введенной части
+                    task_part = args_after_add[0].upper()
+                    for task in TASKS:
+                        if task.startswith(task_part):
+                            yield Completion(
+                                task,
+                                start_position=-len(task_part),
+                                display=f"{task} - {TASKS[task]}"
+                            )
+                # Для hours и message автодополнения нет
 
-            # Автодополнение кодов задач
-            if '-c' in text:
-                task_part = text[-1].upper()
-                for task in TASKS:
-                    if task.startswith(task_part):
-                        yield Completion(task, start_position=-len(task_part), display=f"{task} - {TASKS[task]}")
+            # Обработка флагов (-d, -t)
+            else:
+                params = {
+                    '-d': 'Дата (дд.мм.гггг)',
+                    '-t': 'Время (чч:мм)'
+                }
+                # Если последний аргумент начинается с '-', предлагаем параметры
+                if args_after_add and args_after_add[-1].startswith('-'):
+                    current_param = args_after_add[-1]
+                    for param in params:
+                        if param.startswith(current_param):
+                            yield Completion(
+                                param,
+                                start_position=-len(current_param),
+                                display=f"{param} - {params[param]}"
+                            )
+            return
+
+        # Другие команды (status, push) не требуют автодополнения
+        return
 
 
 class WorklogManager:
@@ -69,28 +92,26 @@ class WorklogManager:
             print(f"Ошибка при сохранении: {e}")
 
     def add_entry(self, args):
-        parser = argparse.ArgumentParser(prog='lit add', exit_on_error=False)
-        self._configure_add_parser(parser)
-
-        try:
-            # Обработка позиционных аргументов
-            if len(args) >= 3 and not args[0].startswith('-'):
-                args = ['-c', args[0], '-l', args[1], '-m', ' '.join(args[2:])]
-
+        if isinstance(args, dict):  # Если аргументы пришли из CLI
+            opts = argparse.Namespace(**args)
+        else:  # Если из интерактивного режима
+            parser = argparse.ArgumentParser(prog='lit add', exit_on_error=False)
+            self._configure_add_parser(parser)
             opts = parser.parse_args(args)
 
+        try:
             # Валидация
             if opts.code not in TASKS:
                 raise ValueError(f"Неизвестный код задачи: {opts.code}")
 
             # Расчет времени окончания
             start_time = datetime.strptime(f"{opts.date} {opts.time}", "%d.%m.%Y %H:%M")
-            end_time = start_time + timedelta(hours=opts.l)
+            end_time = start_time + timedelta(hours=opts.hours)
 
             # Форматирование записи
             entry = (
                 f"{opts.date} [{opts.time} - {end_time.strftime('%H:%M')}] "
-                f"{opts.code} {opts.l:.1f}h `{opts.message}`"
+                f"{opts.code} {opts.hours:.1f}h `{opts.message}`"
             )
             self.entries.append(entry)
             self._save()
@@ -133,13 +154,15 @@ class WorklogManager:
     @staticmethod
     def _configure_add_parser(parser):
         """Настройка парсера для команды add."""
-        parser.add_argument('-c', '--code', required=True, help='Код задачи')
-        parser.add_argument('-l', type=float, required=True, help='Количество часов')
-        parser.add_argument('-m', '--message', required=True, help='Сообщение')
-        parser.add_argument('-d', '--date', default=datetime.now().strftime('%d.%m.%Y'), help='Дата (дд.мм.гггг)')
-        parser.add_argument('-t', '--time', default=datetime.now().strftime('%H:%M'), help='Время (чч:мм)')
-
-
+        parser.add_argument('code', help='Код задачи (например, SOGAZ-123)')
+        parser.add_argument('hours', type=float, help='Количество часов')
+        parser.add_argument('message', help='Сообщение')
+        parser.add_argument('-d', '--date',
+                            default=datetime.now().strftime('%d.%m.%Y'),
+                            help='Дата (дд.мм.гггг)')
+        parser.add_argument('-t', '--time',
+                            default=datetime.now().strftime('%H:%M'),
+                            help='Время (чч:мм)')
 def main():
     manager = WorklogManager()
     session = PromptSession(completer=WorklogCompleter())
@@ -188,16 +211,7 @@ if __name__ == '__main__':
     manager = WorklogManager()
 
     if args.command == 'add':
-        # Преобразуем Namespace в список аргументов
-        add_args = []
-        for key, value in vars(args).items():
-            if key == 'command':
-                continue
-            if key == 'l':
-                add_args.extend(['-l', str(value)])
-            else:
-                add_args.extend([f'--{key}', str(value)])
-        manager.add_entry(add_args)
+        manager.add_entry(vars(args))
     elif args.command == 'status':
         manager.show_status()
     elif args.command == 'push':
