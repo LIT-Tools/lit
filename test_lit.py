@@ -11,8 +11,7 @@ class TestWorklogManager(unittest.TestCase):
         self.manager.entries = []
 
     def tearDown(self):
-        if os.path.exists(LOG_FILE):
-            os.remove(LOG_FILE)
+        pass  # Не требуется очистка реальных файлов
 
     class MockedDateTime(datetime):
         _fixed_time = datetime(2023, 1, 15, 14, 30)
@@ -29,43 +28,17 @@ class TestWorklogManager(unittest.TestCase):
 
     @patch('lit.datetime')
     @patch('builtins.open', new_callable=mock_open)
-    def test_add_command_success(self, mock_file, mock_datetime):
-        mock_datetime.side_effect = lambda *args, **kw: self.MockedDateTime(*args, **kw)
-        mock_datetime.now.return_value = self.MockedDateTime.now()
-        mock_datetime.strptime.side_effect = lambda *args: datetime.strptime(*args)
-
-        args = ['-c', 'SOGAZ-123', '-l', '7', '-m', 'Описание работы']
-        self.manager.add_entry(args)
-
-        expected_entry = "15.01.2023 [14:30 - 21:30] SOGAZ-123 7.0h `Описание работы`\n"
-        mock_file().write.assert_called_once_with(expected_entry)
-
-    @patch('lit.datetime')
-    @patch('builtins.open', new_callable=mock_open)
-    def test_full_add_command_success(self, mock_file, mock_datetime):
-        mock_datetime.side_effect = lambda *args, **kw: self.MockedDateTime(*args, **kw)
-        mock_datetime.now.return_value = self.MockedDateTime.now()
-        mock_datetime.strptime.side_effect = lambda *args: datetime.strptime(*args)
-
-        args = ['-c', 'SOGAZ-123', '-l', '7', '-m', 'Описание работы', '-d', '20.02.2024', '-t', '10:00']
-        self.manager.add_entry(args)
-
-        expected_entry = "20.02.2024 [10:00 - 17:00] SOGAZ-123 7.0h `Описание работы`\n"
-        mock_file().write.assert_called_once_with(expected_entry)
-
-    @patch('lit.datetime')
-    @patch('builtins.open', new_callable=mock_open)
     def test_two_entries_success(self, mock_file, mock_datetime):
         mock_datetime.side_effect = lambda *args, **kw: self.MockedDateTime(*args, **kw)
         mock_datetime.now.return_value = self.MockedDateTime.now()
         mock_datetime.strptime.side_effect = lambda *args: datetime.strptime(*args)
 
-        self.manager.add_entry(['-c', 'SOGAZ-123', '-l', '2', '-m', 'Первая запись'])
-        self.manager.add_entry(['-c', 'SOGAZ-44', '-l', '1.5', '-m', 'Вторая запись'])
+        self.manager.add_entry(['SOGAZ-123', '7', 'Описание работы'])
+        self.manager.add_entry(['SOGAZ-123', '7', 'Описание работы', '-d', '20.02.2024', '-t', '10:00'])
 
         expected_content = (
-            "15.01.2023 [14:30 - 16:30] SOGAZ-123 2.0h `Первая запись`\n"
-            "15.01.2023 [14:30 - 16:00] SOGAZ-44 1.5h `Вторая запись`\n"
+            "15.01.2023 [14:30 - 21:30] SOGAZ-123 7.0h `Описание работы`\n"
+            "20.02.2024 [10:00 - 17:00] SOGAZ-123 7.0h `Описание работы`\n"
         )
         mock_file().write.assert_called_with(expected_content)
 
@@ -81,7 +54,7 @@ class TestWorklogManager(unittest.TestCase):
         mock_input.return_value = 'y'
 
         # Добавляем запись
-        self.manager.add_entry(['-c', 'SOGAZ-123', '-l', '2', '-m', 'Тестовая запись'])
+        self.manager.add_entry(['SOGAZ-123', '2', 'Тестовая запись'])
         self.assertEqual(len(self.manager.entries), 1)
 
         # Проверяем что запись сохранилась в файл
@@ -117,7 +90,7 @@ class TestWorklogManager(unittest.TestCase):
         mock_input.return_value = 'n'
 
         # Добавляем запись
-        self.manager.add_entry(['-c', 'SOGAZ-123', '-l', '2', '-m', 'Тестовая запись'])
+        self.manager.add_entry(['SOGAZ-123', '2', 'Тестовая запись'])
         self.assertEqual(len(self.manager.entries), 1)
 
         # Проверяем что запись сохранилась в файл
