@@ -1,9 +1,12 @@
 import os
 import argparse
+import shlex
+import re
 from datetime import datetime, timedelta
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
+from six import print_
 
 # Конфигурация
 LOG_FILE = os.path.join(os.path.expanduser("~"), ".litlog")
@@ -11,8 +14,15 @@ TASKS = {
     'SOGAZ-123': 'добавить кнопку',
     'SOGAZ-44': 'настройка сборки фронта',
     'SOGAZ-1752': 'Скрыть страницу О компании',
+    'BKWFM-1752': 'Настроит gRPC',
 }
 
+COMMITS = {
+    'SOGAZ-123': ['добавил кнопку в вёрстку'],
+    'SOGAZ-44': ['Настроил сборку в контейнер', 'Настроил сборщик Х'],
+    'SOGAZ-1752': ['Убрал из меню ссылку О компании'],
+    'BKWFM-1752': ['Создал DUG под gRPC'],
+}
 
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
@@ -29,24 +39,41 @@ class WorklogCompleter(Completer):
             args_after_add = text[1:]
             num_args = len(args_after_add)
             has_flags = any(arg.startswith('-') for arg in args_after_add)
-
+            # print_(args_after_add)
             # Обработка позиционных аргументов (code, hours, message)
-            if not has_flags:
-                if num_args == 0:
-                    # Предлагаем все коды задач
-                    for task in TASKS:
-                        yield Completion(task, start_position=0, display=f"{task} - {TASKS[task]}")
-                elif num_args == 1:
-                    # Предлагаем коды задач, начинающиеся с введенной части
-                    task_part = args_after_add[0].upper()
-                    for task in TASKS:
-                        if task.startswith(task_part):
-                            yield Completion(
-                                task,
-                                start_position=-len(task_part),
-                                display=f"{task} - {TASKS[task]}"
-                            )
-                # Для hours и message автодополнения нет
+            # if num_args > 0:
+            #     if not re.match(r'^[A-Z]{2,}-\d+$', args_after_add[0]):
+            #         args_after_add = []
+            #         num_args = 0
+
+            if num_args == 0:
+                # Предлагаем все коды задач
+                for task in TASKS:
+                    yield Completion(task, start_position=0, display=f"{task} - {TASKS[task]}")
+            elif num_args == 1 and not document.text_before_cursor.endswith(" "):
+                # Предлагаем коды задач, начинающиеся с введенной части
+                task_part = args_after_add[0].upper()
+                for task in TASKS:
+                    if task.startswith(task_part):
+                        yield Completion(
+                            task,
+                            start_position=-len(task_part),
+                            display=f"{task} - {TASKS[task]}"
+                        )
+
+            elif num_args == 1:
+                # Автодополнение для часов
+                suggestions = ["0.5", "1", "2", "4", "8"]
+                for suggestion in suggestions:
+                    yield Completion(suggestion, start_position=0, display=f"{suggestion} часов")
+
+            elif num_args == 2:
+                # Автодополнение для сообщения:
+                task_code = args_after_add[0]
+                commit_part = args_after_add[2] if num_args >= 3 else ''
+                commit_messages = COMMITS.get(task_code, [])
+                for commit in commit_messages:
+                    yield Completion(f"'{commit}'", start_position=-len(commit_part),  display=commit)
 
             # Обработка флагов (-d, -t)
             else:
@@ -68,7 +95,6 @@ class WorklogCompleter(Completer):
 
         # Другие команды (status, push) не требуют автодополнения
         return
-
 
 class WorklogManager:
     def __init__(self):
@@ -174,7 +200,7 @@ def main():
                 if not user_input:
                     continue
 
-                args = user_input.split()
+                args = shlex.split(user_input)
                 command = args[0]
 
                 if command == 'add':
