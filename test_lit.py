@@ -113,5 +113,33 @@ class TestWorklogManager(unittest.TestCase):
         mock_print.assert_any_call("  SOGAZ-123 2.0h `Тестовая запись`")
         mock_print.assert_any_call("Отмена отправки.")
 
+
+    @patch('lit.datetime')
+    @patch('builtins.open', new_callable=mock_open)
+    def test_cli_add_command(self, mock_file, mock_datetime):
+        # Настройка фиктивного времени
+        mock_datetime.side_effect = lambda *args, **kw: self.MockedDateTime(*args, **kw)
+        mock_datetime.now.return_value = self.MockedDateTime.now()
+        mock_datetime.strptime.side_effect = lambda *args: datetime.strptime(*args)
+
+        # Симулируем передачу аргументов из CLI (как если бы они были получены через vars(args))
+        cli_args = {
+            'code': 'SOGAZ-123',
+            'hours': 50.0,
+            'message': 'Описание работы',
+            'date': '15.01.2023',
+            'time': '14:30'
+        }
+
+        # Выполняем команду CLI add
+        self.manager.add_entry(cli_args)
+
+        # Расчет времени окончания: 15.01.2023 14:30 + 50 часов = 17.01.2023 16:30
+        expected_entry = "15.01.2023 [14:30 - 16:30] SOGAZ-123 50.0h `Описание работы`\n"
+
+        # Проверяем, что запись корректно записана в файл
+        mock_file().write.assert_called_with(expected_entry)
+
+
 if __name__ == '__main__':
     unittest.main()
