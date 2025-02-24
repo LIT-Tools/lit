@@ -117,6 +117,7 @@ class WorklogManager:
             print("Нет записей для отправки.")
             return
 
+        print("\nПодготовленные записи:")
         self.show_status()
         confirm = input("\nВы уверены что хотите отправить эти записи? [y/N]: ").strip().lower()
 
