@@ -9,7 +9,10 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from six import print_
 
 # Конфигурация
-LOG_FILE = os.path.join(os.path.expanduser("~"), ".litlog")
+LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
+os.makedirs(LIT_DIR, exist_ok=True)
+LIT_STORE = os.path.join(LIT_DIR, ".litstore")
+
 TASKS = {
     'TASK-123': 'добавить кнопку',
     'TASK-44': 'настройка сборки фронта',
@@ -111,16 +114,16 @@ class WorklogManager:
         self._load()
 
     def _load(self):
-        if os.path.exists(LOG_FILE):
+        if os.path.exists(LIT_STORE):
             try:
-                with open(LOG_FILE, 'r', encoding='utf-8') as f:
+                with open(LIT_STORE, 'r', encoding='utf-8') as f:
                     self.entries = [line.strip() for line in f.readlines() if line.strip()]
             except Exception as e:
                 print(f"Ошибка при загрузке: {e}")
 
     def _save(self):
         try:
-            with open(LOG_FILE, 'w', encoding='utf-8') as f:
+            with open(LIT_STORE, 'w', encoding='utf-8') as f:
                 f.write("\n".join(self.entries) + "\n")  # Добавить + "\n"
             # print("Файл успешно сохранён.")
         except Exception as e:
@@ -156,7 +159,7 @@ class WorklogManager:
             )
             self.entries.append(entry)
             self._save()
-            # print(f"Запись добавлена! Файл: {LOG_FILE}")
+            # print(f"Запись добавлена! Файл: {LIT_STORE}")
 
         except Exception as e:
             print(f"⛔ Ошибка: {str(e)}")
