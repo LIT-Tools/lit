@@ -27,6 +27,10 @@ COMMITS = {
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
         text = document.text_before_cursor.split()
+        params = {
+            '-d': 'Дата (дд.мм.гггг)',
+            '-t': 'Время (чч:мм)'
+        }
 
         # Автодополнение команд
         if len(text) == 0:
@@ -79,12 +83,13 @@ class WorklogCompleter(Completer):
                 for commit in commit_messages:
                     yield Completion(f"'{commit}'", start_position=-len(commit_part),  display=commit)
 
+            elif num_args == 3:
+                # Предлагаем все коды задач
+                for param in params:
+                    yield Completion(param, start_position=0, display=f"{param} - {params[param]}")
+
             # Обработка флагов (-d, -t)
             else:
-                params = {
-                    '-d': 'Дата (дд.мм.гггг)',
-                    '-t': 'Время (чч:мм)'
-                }
                 # Если последний аргумент начинается с '-', предлагаем параметры
                 if args_after_add and args_after_add[-1].startswith('-'):
                     current_param = args_after_add[-1]
