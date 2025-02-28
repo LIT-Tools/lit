@@ -11,9 +11,9 @@ from six import print_
 # Конфигурация
 LOG_FILE = os.path.join(os.path.expanduser("~"), ".litlog")
 TASKS = {
-    'SOGAZ-123': 'добавить кнопку',
-    'SOGAZ-44': 'настройка сборки фронта',
-    'SOGAZ-1752': 'Скрыть страницу О компании',
+    'TASK-123': 'добавить кнопку',
+    'TASK-44': 'настройка сборки фронта',
+    'TASK-1752': 'Скрыть страницу О компании',
     'BKWFM-1752': 'Настроит gRPC',
 }
 
@@ -195,7 +195,7 @@ class WorklogManager:
     @staticmethod
     def _configure_add_parser(parser):
         """Настройка парсера для команды add."""
-        parser.add_argument('code', help='Код задачи (например, SOGAZ-123)')
+        parser.add_argument('code', help='Код задачи (например, TASK-123)')
         parser.add_argument('hours', type=float, help='Количество часов')
         parser.add_argument('message', help='Сообщение')
         parser.add_argument('-d', '--date',
