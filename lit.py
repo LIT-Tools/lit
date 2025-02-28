@@ -126,6 +126,8 @@ class WorklogManager:
             opts = parser.parse_args(args)
 
         try:
+            opts.code = opts.code.upper()
+
             # Проверка формата кода задачи
             if not re.match(r'^[A-Z]{2,}-\d+$', opts.code):
                 raise ValueError(f"Неверный формат кода задачи: {opts.code}. Ожидается формат: ABC-123")
