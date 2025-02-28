@@ -26,7 +26,7 @@ COMMITS = {
 
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
-        text = document.text_before_cursor.split()
+        text = shlex.split(document.text_before_cursor)
         params = {
             '-d': 'Дата (дд.мм.гггг)',
             '-t': 'Время (чч:мм)'
