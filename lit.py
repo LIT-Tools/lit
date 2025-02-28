@@ -54,7 +54,7 @@ class WorklogCompleter(Completer):
                 # Предлагаем коды задач, начинающиеся с введенной части
                 task_part = args_after_add[0].upper()
                 for task in TASKS:
-                    if task.startswith(task_part):
+                    if task_part in task:
                         yield Completion(
                             task,
                             start_position=-len(task_part),
