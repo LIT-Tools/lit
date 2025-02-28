@@ -2,6 +2,7 @@ import os
 import argparse
 import shlex
 import re
+import subprocess
 from datetime import datetime, timedelta
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
@@ -37,11 +38,11 @@ class WorklogCompleter(Completer):
 
         # Автодополнение команд
         if len(text) == 0:
-            for cmd in ['add', 'status', 'push']:
+            for cmd in ['add', 'status', 'push', 'edit']:
                 yield Completion(cmd, start_position=0, display=cmd)
             return
         elif len(text) == 1 and not document.text_before_cursor.endswith(" "):
-            for cmd in ['add', 'status', 'push']:
+            for cmd in ['add', 'status', 'push', 'edit']:
                 yield Completion(cmd, start_position=-len(text), display=cmd)
             return
 
@@ -207,6 +208,39 @@ class WorklogManager:
         parser.add_argument('-t', '--time',
                             default=datetime.now().strftime('%H:%M'),
                             help='Время (чч:мм)')
+
+    def edit_entries(self):
+        """Открыть файл .litstore в редакторе"""
+        # Определяем редактор по умолчанию для Windows
+        if os.name == 'nt':
+            default_editor = 'notepad'
+        else:
+            default_editor = 'vim'
+
+        editor = os.environ.get('EDITOR') or os.environ.get('VISUAL') or default_editor
+
+        try:
+            # Создаем файл если его нет
+            if not os.path.exists(LIT_STORE):
+                open(LIT_STORE, 'w').close()
+
+            # Для Notepad в Windows используем shell=True
+            if os.name == 'nt' and 'notepad' in editor.lower():
+                subprocess.run(f'"{editor}" "{LIT_STORE}"', shell=True, check=True)
+            else:
+                subprocess.run([editor, LIT_STORE], check=True)
+
+            # Перезагружаем данные в любом случае
+            self._load()
+            print("✓ Изменения применены")
+
+        except subprocess.CalledProcessError as e:
+            print(f"⚠ Ошибка редактора: {str(e)}")
+            if os.name == 'nt':
+                print("Попробуйте установить редактор (например Notepad++) и добавить его в PATH")
+        except Exception as e:
+            print(f"⚠ Ошибка: {str(e)}")
+
 def main():
     manager = WorklogManager()
     session = PromptSession(completer=WorklogCompleter())
@@ -227,6 +261,8 @@ def main():
                     manager.show_status()
                 elif command == 'push':
                     manager.push_entries()
+                elif command == 'edit':
+                    manager.edit_entries()
                 else:
                     print("Неизвестная команда")
 
@@ -251,6 +287,9 @@ if __name__ == '__main__':
     # Парсер для команды push
     subparsers.add_parser('push', help='Отправить записи в Jira')
 
+    # Парсер для команды edit
+    subparsers.add_parser('edit', help='Редактировать файл ворклога')
+
     args = parser.parse_args()
     manager = WorklogManager()
 
@@ -260,5 +299,7 @@ if __name__ == '__main__':
         manager.show_status()
     elif args.command == 'push':
         manager.push_entries()
+    elif args.command == 'edit':
+        manager.edit_entries()
     else:
         main()
