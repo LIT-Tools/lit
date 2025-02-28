@@ -33,6 +33,10 @@ class WorklogCompleter(Completer):
             for cmd in ['add', 'status', 'push']:
                 yield Completion(cmd, start_position=0, display=cmd)
             return
+        elif len(text) == 1 and not document.text_before_cursor.endswith(" "):
+            for cmd in ['add', 'status', 'push']:
+                yield Completion(cmd, start_position=-len(text), display=cmd)
+            return
 
         # Автодополнение для команды add
         if text[0] == 'add':
