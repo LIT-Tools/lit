@@ -3,6 +3,7 @@ import argparse
 import shlex
 import re
 import subprocess
+import json
 from datetime import datetime, timedelta
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
@@ -14,6 +15,9 @@ LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
 os.makedirs(LIT_DIR, exist_ok=True)
 LIT_STORE = os.path.join(LIT_DIR, ".litstore")
 
+# Путь к файлу с коммитами
+COMMITS_FILE = os.path.join(LIT_DIR, "commits.json")
+
 TASKS = {
     'TASK-123': 'добавить кнопку',
     'TASK-44': 'настройка сборки фронта',
@@ -21,12 +25,21 @@ TASKS = {
     'BKWFM-1752': 'Настроит gRPC',
 }
 
-COMMITS = {
-    'SOGAZ-123': ['добавил кнопку в вёрстку'],
-    'SOGAZ-44': ['Настроил сборку в контейнер', 'Настроил сборщик Х'],
-    'SOGAZ-1752': ['Убрал из меню ссылку О компании'],
-    'BKWFM-1752': ['Создал DUG под gRPC'],
-}
+def load_commits() -> dict:
+    """Загрузка коммитов из файла"""
+    try:
+        with open(COMMITS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # Если файла нет - создаём с начальными данными
+        return {}
+    except json.JSONDecodeError:
+        # Битый файл
+        print(f"ERROR: Invalid JSON format.")
+        return {}
+
+COMMITS = load_commits()
+
 
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
