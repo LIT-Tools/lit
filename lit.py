@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
-from six import print_
 
 # Конфигурация
 LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
@@ -40,7 +39,6 @@ def load_commits() -> dict:
 
 COMMITS = load_commits()
 
-
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
         text = shlex.split(document.text_before_cursor)
@@ -63,13 +61,6 @@ class WorklogCompleter(Completer):
         if text[0] == 'add':
             args_after_add = text[1:]
             num_args = len(args_after_add)
-            has_flags = any(arg.startswith('-') for arg in args_after_add)
-            # print_(args_after_add)
-            # Обработка позиционных аргументов (code, hours, message)
-            # if num_args > 0:
-            #     if not re.match(r'^[A-Z]{2,}-\d+$', args_after_add[0]):
-            #         args_after_add = []
-            #         num_args = 0
 
             if num_args == 0:
                 # Предлагаем все коды задач
@@ -173,7 +164,6 @@ class WorklogManager:
             )
             self.entries.append(entry)
             self._save()
-            # print(f"Запись добавлена! Файл: {LIT_STORE}")
 
         except Exception as e:
             print(f"⛔ Ошибка: {str(e)}")
