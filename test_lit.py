@@ -1,9 +1,7 @@
 import unittest
-import os
 from unittest.mock import patch, mock_open
 from datetime import datetime
-from lit import WorklogManager, LOG_FILE
-
+from lit import WorklogManager
 
 class TestWorklogManager(unittest.TestCase):
     def setUp(self):
@@ -77,7 +75,6 @@ class TestWorklogManager(unittest.TestCase):
         mock_print.assert_any_call("\nОтправка записей в Jira...")
         mock_print.assert_any_call("Записи успешно отправлены!")
 
-
     @patch('builtins.input')
     @patch('builtins.print')
     @patch('lit.datetime')
@@ -113,7 +110,6 @@ class TestWorklogManager(unittest.TestCase):
         mock_print.assert_any_call("  TASK-123 2.0h `Тестовая запись`")
         mock_print.assert_any_call("Отмена отправки.")
 
-
     @patch('lit.datetime')
     @patch('builtins.open', new_callable=mock_open)
     def test_cli_add_command(self, mock_file, mock_datetime):
@@ -139,7 +135,6 @@ class TestWorklogManager(unittest.TestCase):
 
         # Проверяем, что запись корректно записана в файл
         mock_file().write.assert_called_with(expected_entry)
-
 
 if __name__ == '__main__':
     unittest.main()
