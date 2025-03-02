@@ -33,9 +33,29 @@ def load_dict(path_file) -> dict:
 COMMITS = load_dict(COMMITS_FILE)
 TASKS = load_dict(TASKS_FILE)
 
+#TODO В утилсы
+def safe_split(text):
+    """
+    Разбирает строку с учётом кавычек.
+    Если остаётся незакрытая кавычка, она дописывается в конец строки.
+    Экранирование не учитывается.
+    """
+    open_quote = None
+    for ch in text:
+        if ch in ("'", '"'):
+            if open_quote is None:
+                open_quote = ch  # начинаем секцию
+            elif open_quote == ch:
+                open_quote = None  # закрываем секцию
+            # Если текущая кавычка не соответствует открытой,
+            # она считается обычным символом внутри кавычек.
+    if open_quote is not None:
+        text += open_quote  # дописываем закрывающую кавычку
+    return shlex.split(text)
+
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
-        text = shlex.split(document.text_before_cursor)
+        text = safe_split(document.text_before_cursor)
         params = {
             '-d': 'Дата (дд.мм.гггг)',
             '-t': 'Время (чч:мм)'

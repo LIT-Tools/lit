@@ -1,7 +1,10 @@
 import unittest
 from unittest.mock import patch, mock_open
 from datetime import datetime
-from lit import WorklogManager
+from lit import WorklogManager, WorklogCompleter, TASKS
+from prompt_toolkit.document import Document
+
+TASKS["TASK-123"] = "Test Task"
 
 class TestWorklogManager(unittest.TestCase):
     def setUp(self):
@@ -135,6 +138,47 @@ class TestWorklogManager(unittest.TestCase):
 
         # Проверяем, что запись корректно записана в файл
         mock_file().write.assert_called_with(expected_entry)
+
+class TestWorklogCompleterError(unittest.TestCase):
+    def test_unclosed_single_quotation_mark(self):
+        completer = WorklogCompleter()
+        doc = Document(text="add TASK-123 0.5 '")
+        try:
+            list(completer.get_completions(doc, None))
+        except Exception as e:
+            self.fail(f"Autocompletion raised an exception: {e}")
+
+    def test_unclosed_double_quotation_mark(self):
+        completer = WorklogCompleter()
+        doc = Document(text="add TASK-123 0.5 \"")
+        try:
+            list(completer.get_completions(doc, None))
+        except Exception as e:
+            self.fail(f"Autocompletion raised an exception: {e}")
+
+    def test_unclosed_double_and_then_single_quotes_mark(self):
+        completer = WorklogCompleter()
+        doc = Document(text="add TASK-123 0.5 \"'")
+        try:
+            list(completer.get_completions(doc, None))
+        except Exception as e:
+            self.fail(f"Autocompletion raised an exception: {e}")
+
+    def test_unclosed_single_and_then_double_quotes_mark(self):
+        completer = WorklogCompleter()
+        doc = Document(text="add TASK-123 0.5 '\"")
+        try:
+            list(completer.get_completions(doc, None))
+        except Exception as e:
+            self.fail(f"Autocompletion raised an exception: {e}")
+
+    def test_unbalanced_quotes_autocompletion(self):
+        completer = WorklogCompleter()
+        doc = Document(text="add TASK-123 0.5 '\"'")
+        try:
+            list(completer.get_completions(doc, None))
+        except Exception as e:
+            self.fail(f"Autocompletion raised an exception: {e}")
 
 if __name__ == '__main__':
     unittest.main()
