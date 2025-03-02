@@ -153,6 +153,14 @@ class WorklogManager:
             if opts.code not in TASKS:
                 print(f"⚠️ Внимание: Задача {opts.code} не найдена в системе. Запись будет создана с ручным вводом!")
 
+            if  opts.time > '19:00':
+                print(f"⚠️ Внимание: В задаче {opts.code} указано время начала {opts.time} для даты {opts.date}!")
+                print(f"             Это может вызвать потенциальные проблемы в случае нестандартных часовых поясов!")
+                print(f"             Используйте ключ -t для указания начального времени. Например: -t 10:00 ")
+
+            if  opts.time < '05:00':
+                print(f"⚠️ Внимание: В задаче {opts.code} указано время начала {opts.time} для даты {opts.date}!")
+
             # Расчет времени окончания
             start_time = datetime.strptime(f"{opts.date} {opts.time}", "%d.%m.%Y %H:%M")
             end_time = start_time + timedelta(hours=opts.hours)
