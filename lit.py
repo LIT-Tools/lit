@@ -9,25 +9,18 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
 
-# Конфигурация
+#TODO Конфигурация дублируется, вынести в отдельный код
 LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
 os.makedirs(LIT_DIR, exist_ok=True)
 LIT_STORE = os.path.join(LIT_DIR, ".litstore")
-
-# Путь к файлу с коммитами
 COMMITS_FILE = os.path.join(LIT_DIR, "commits.json")
+TASKS_FILE = os.path.join(LIT_DIR, "tasks.json")
 
-TASKS = {
-    'TASK-123': 'добавить кнопку',
-    'TASK-44': 'настройка сборки фронта',
-    'TASK-1752': 'Скрыть страницу О компании',
-    'BKWFM-1752': 'Настроит gRPC',
-}
-
-def load_commits() -> dict:
+#TODO В утилсы
+def load_dict(path_file) -> dict:
     """Загрузка коммитов из файла"""
     try:
-        with open(COMMITS_FILE, 'r', encoding='utf-8') as f:
+        with open(path_file, 'r', encoding='utf-8') as f:
             return json.load(f)
     except FileNotFoundError:
         # Если файла нет - создаём с начальными данными
@@ -37,7 +30,8 @@ def load_commits() -> dict:
         print(f"ERROR: Invalid JSON format.")
         return {}
 
-COMMITS = load_commits()
+COMMITS = load_dict(COMMITS_FILE)
+TASKS = load_dict(TASKS_FILE)
 
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
