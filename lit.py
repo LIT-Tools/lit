@@ -205,7 +205,7 @@ class WorklogManager:
             if date_part != current_date:
                 print(f"\n{date_part}")
                 current_date = date_part
-            print(f"  {entry.split('] ')[1]}")
+            print(f"  {entry.split(date_part)[1]}")
 
     def push_entries(self):
         if not self.entries:
