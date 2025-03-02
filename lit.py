@@ -42,11 +42,7 @@ class WorklogCompleter(Completer):
         }
 
         # Автодополнение команд
-        if len(text) == 0:
-            for cmd in ['add', 'status', 'push', 'edit']:
-                yield Completion(cmd, start_position=0, display=cmd)
-            return
-        elif len(text) == 1 and not document.text_before_cursor.endswith(" "):
+        if len(text) <= 1 and not document.text_before_cursor.endswith(" "):
             for cmd in ['add', 'status', 'push', 'edit']:
                 yield Completion(cmd, start_position=-len(text), display=cmd)
             return
