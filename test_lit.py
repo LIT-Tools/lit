@@ -35,11 +35,11 @@ class TestWorklogManager(unittest.TestCase):
         mock_datetime.strptime.side_effect = lambda *args: datetime.strptime(*args)
 
         self.manager.add_entry(['TASK-123', '7', 'Описание работы'])
-        self.manager.add_entry(['TASK-123', '7', 'Описание работы', '-d', '20.02.2024', '-t', '10:00'])
+        self.manager.add_entry(['TASK-123', '15m', 'Описание работы', '-d', '20.02.2024', '-t', '10:00'])
 
         expected_content = (
             "15.01.2023 [14:30 - 21:30] TASK-123 7.0h `Описание работы`\n"
-            "20.02.2024 [10:00 - 17:00] TASK-123 7.0h `Описание работы`\n"
+            "20.02.2024 [10:00 - 10:15] TASK-123 15.0m `Описание работы`\n"
         )
         mock_file().write.assert_called_with(expected_content)
 
@@ -124,7 +124,7 @@ class TestWorklogManager(unittest.TestCase):
         # Симулируем передачу аргументов из CLI (как если бы они были получены через vars(args))
         cli_args = {
             'code': 'TASK-123',
-            'hours': 50.0,
+            'hours': '40h',
             'message': 'Описание работы',
             'date': '15.01.2023',
             'time': '14:30'
@@ -134,7 +134,7 @@ class TestWorklogManager(unittest.TestCase):
         self.manager.add_entry(cli_args)
 
         # Расчет времени окончания: 15.01.2023 14:30 + 50 часов = 17.01.2023 16:30
-        expected_entry = "15.01.2023 [14:30 - 16:30] TASK-123 50.0h `Описание работы`\n"
+        expected_entry = "15.01.2023 [14:30 - 06:30] TASK-123 40.0h `Описание работы`\n"
 
         # Проверяем, что запись корректно записана в файл
         mock_file().write.assert_called_with(expected_entry)

@@ -171,14 +171,22 @@ class WorklogManager:
             if  opts.time < '05:00':
                 print(f"⚠️ Внимание: В задаче {opts.code} указано время начала {opts.time} для даты {opts.date}!")
 
+            pra_hours = re.match(r'^(\d+)(\w*)$', opts.hours)
+            hours = float(pra_hours[1])
+            if pra_hours.lastindex == 2 and (pra_hours[2] == 'm' or pra_hours[2] == 'M'):
+                opts.hours = f'{hours}m'
+                hours /= 60
+            else:
+                opts.hours = f'{hours}h'
+
             # Расчет времени окончания
             start_time = datetime.strptime(f"{opts.date} {opts.time}", "%d.%m.%Y %H:%M")
-            end_time = start_time + timedelta(hours=opts.hours)
+            end_time = start_time + timedelta(hours=hours)
 
             # Форматирование записи
             entry = (
                 f"{opts.date} [{opts.time} - {end_time.strftime('%H:%M')}] "
-                f"{opts.code} {opts.hours:.1f}h `{opts.message}`"
+                f"{opts.code} {opts.hours} `{opts.message}`"
             )
             self.entries.append(entry)
             self._save()
@@ -221,7 +229,7 @@ class WorklogManager:
     def _configure_add_parser(parser):
         """Настройка парсера для команды add."""
         parser.add_argument('code', help='Код задачи (например, TASK-123)')
-        parser.add_argument('hours', type=float, help='Количество часов')
+        parser.add_argument('hours', help='Количество часов или минут (например, 15m)')
         parser.add_argument('message', help='Сообщение')
         parser.add_argument('-d', '--date',
                             default=datetime.now().strftime('%d.%m.%Y'),
