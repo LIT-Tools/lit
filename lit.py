@@ -89,9 +89,9 @@ class WorklogCompleter(Completer):
 
             elif num_args == 1:
                 # Автодополнение для часов
-                suggestions = ["0.5", "1", "2", "4", "8"]
+                suggestions = ["1", "30m", "2h", "1d", "4h", "3h", "'1h 30m'", "15m", "20m", "10m"]
                 for suggestion in suggestions:
-                    yield Completion(suggestion, start_position=0, display=f"{suggestion} часов")
+                    yield Completion(suggestion, start_position=0)
 
             elif num_args == 2:
                 # Автодополнение для сообщения:
@@ -171,13 +171,28 @@ class WorklogManager:
             if  opts.time < '05:00':
                 print(f"⚠️ Внимание: В задаче {opts.code} указано время начала {opts.time} для даты {opts.date}!")
 
-            pra_hours = re.match(r'^(\d+)(\w*)$', opts.hours)
-            hours = float(pra_hours[1])
-            if pra_hours.lastindex == 2 and (pra_hours[2] == 'm' or pra_hours[2] == 'M'):
-                opts.hours = f'{hours}m'
-                hours /= 60
-            else:
-                opts.hours = f'{hours}h'
+            pattern = r'(\d+(?:[.,]\d+)?)([dhmDHM])?'
+            matches = re.findall(pattern, opts.hours)
+
+            if not matches:
+                raise ValueError("Неверный формат количества времени. Ожидается, например, '1h 15m' или '8'.")
+
+            hours = 0.0
+            hours_str = ''
+            for value, unit in matches:
+                # Если суффикс не указан, считаем, что это часы.
+                unit = unit if unit else 'h'
+                num = float(value.replace(',', '.'))
+                if unit.lower() == 'd':
+                    hours += num * 8
+                elif unit.lower() == 'h':
+                    hours += num
+                elif unit.lower() == 'm':
+                    hours += num / 60
+
+                hours_str += f'{value}{unit} '
+
+            opts.hours = hours_str.strip().replace('.', ',')
 
             # Расчет времени окончания
             start_time = datetime.strptime(f"{opts.date} {opts.time}", "%d.%m.%Y %H:%M")
