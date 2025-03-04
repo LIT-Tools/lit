@@ -1,0 +1,20 @@
+[project]
+name = "lit"
+version = "0.0.1"
+description = "Tool for quickly filling work logs in Jira via CLI"
+authors = [
+    {name = "LEXX",email = "s_kushnarev@rambler.ru"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "prompt-toolkit (>=3.0.50,<4.0.0)",
+    "jira (>=3.8.0,<4.0.0)",
+    "tzlocal (>=5.3,<6.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
