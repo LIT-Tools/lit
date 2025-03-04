@@ -217,10 +217,22 @@ class WorklogManager:
         current_date = None
         for entry in self.entries:
             date_part = entry.split()[0]
-            if date_part != current_date:
-                print(f"\n{date_part}")
-                current_date = date_part
-            print(f"  {entry.split(date_part)[1]}")
+            if date_part != '#':
+                if date_part != current_date:
+                    print(f"\n{date_part}")
+                    current_date = date_part
+                print(f"  {entry.split(date_part)[1]}")
+
+        print('\nЗАПИСИ С ОШИБКАМИ:')
+        current_date = None
+        for entry in self.entries:
+            hash = entry.split()[0]
+            date_part = entry.split()[1]
+            if hash == '#':
+                if date_part != current_date:
+                    print(f"\n{date_part}")
+                    current_date = date_part
+                print(f"  {entry.split(date_part)[1]}")
 
     def push_entries(self):
         if not self.entries:

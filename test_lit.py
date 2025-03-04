@@ -80,7 +80,7 @@ class TestWorklogManager(unittest.TestCase):
         # Проверяем вывод перед подтверждением
         mock_print.assert_any_call("\nПодготовленные записи:")
         mock_print.assert_any_call("\n15.01.2023")
-        mock_print.assert_any_call("  TASK-123 2h `Тестовая запись`")
+        mock_print.assert_any_call("   [14:30 - 16:30] TASK-123 2h `Тестовая запись`")
         mock_print.assert_any_call("\nОтправка записей в Jira...")
         mock_print.assert_any_call("Записи успешно отправлены!")
 
@@ -116,7 +116,7 @@ class TestWorklogManager(unittest.TestCase):
         # Проверяем вывод перед подтверждением
         mock_print.assert_any_call("\nПодготовленные записи:")
         mock_print.assert_any_call("\n15.01.2023")
-        mock_print.assert_any_call("  TASK-123 2h `Тестовая запись`")
+        mock_print.assert_any_call("   [14:30 - 16:30] TASK-123 2h `Тестовая запись`")
         mock_print.assert_any_call("Отмена отправки.")
 
     @patch('lit.datetime')
