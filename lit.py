@@ -56,7 +56,7 @@ def safe_split(text):
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
         text = safe_split(document.text_before_cursor)
-        params = {
+        add_arg_params = {
             '-d': 'Дата (дд.мм.гггг)',
             '-t': 'Время (чч:мм)'
         }
@@ -103,20 +103,20 @@ class WorklogCompleter(Completer):
 
             elif num_args == 3:
                 # Предлагаем все коды задач
-                for param in params:
-                    yield Completion(param, start_position=0, display=f"{param} - {params[param]}")
+                for param in add_arg_params:
+                    yield Completion(param, start_position=0, display=f"{param} - {add_arg_params[param]}")
 
             # Обработка флагов (-d, -t)
             else:
                 # Если последний аргумент начинается с '-', предлагаем параметры
                 if args_after_add and args_after_add[-1].startswith('-'):
                     current_param = args_after_add[-1]
-                    for param in params:
+                    for param in add_arg_params:
                         if param.startswith(current_param):
                             yield Completion(
                                 param,
                                 start_position=-len(current_param),
-                                display=f"{param} - {params[param]}"
+                                display=f"{param} - {add_arg_params[param]}"
                             )
             return
 
