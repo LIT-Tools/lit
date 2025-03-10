@@ -201,7 +201,7 @@ class WorklogManager:
 
             # Форматирование записи
             entry = (
-                f"{opts.date} [{opts.time} - {end_time.strftime('%H:%M')}] "
+                f"{opts.date} [{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}] "
                 f"{opts.code} {opts.hours} `{opts.message}`"
             )
             self.entries.append(entry)
