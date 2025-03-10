@@ -9,6 +9,8 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
 from parser import pars_store
+from import_jira import load_tasks_from_jira
+from import_gitlab import load_commits_from_gitlab
 
 #TODO Конфигурация дублируется, вынести в отдельный код
 LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
@@ -64,7 +66,7 @@ class WorklogCompleter(Completer):
 
         # Автодополнение команд
         if len(text) <= 1 and not document.text_before_cursor.endswith(" "):
-            for cmd in ['add', 'status', 'push', 'edit']:
+            for cmd in ['add', 'status', 'push', 'pull', 'edit']:
                 yield Completion(cmd, start_position=-len(text), display=cmd)
             return
 
@@ -120,6 +122,15 @@ class WorklogCompleter(Completer):
                                 display=f"{param} - {add_arg_params[param]}"
                             )
             return
+
+        # Автодополнение для команды pull
+        if text[0] == 'pull':
+            args_after_add = text[1:]
+            num_args = len(args_after_add)
+
+            if num_args == 0:
+                for key in ['--jira', '--gitlab']:
+                    yield Completion(key, start_position=0)
 
         # Другие команды (status, push) не требуют автодополнения
         return
@@ -319,6 +330,37 @@ class WorklogManager:
         except Exception as e:
             print(f"⚠ Ошибка: {str(e)}")
 
+    def pull_entries(self, args=None, jira=None, gitlab=None):
+        """Загружает задачи из Jira и/или коммиты из GitLab."""
+        # Определяем, что загружать, на основе переданных аргументов
+        if jira is not None or gitlab is not None:
+            # Вызов из CLI с ключевыми аргументами
+            load_jira = jira
+            load_gitlab = gitlab
+        else:
+            # Вызов из интерактивного режима: парсим аргументы
+            parser = argparse.ArgumentParser(prog='lit pull', exit_on_error=False)
+            parser.add_argument('-j', '--jira', action='store_true', help='Загрузить задачи из Jira')
+            parser.add_argument('-g', '--gitlab', action='store_true', help='Загрузить коммиты из GitLab')
+            try:
+                opts = parser.parse_args(args or [])
+            except SystemExit:
+                # В случае ошибки парсинга (например, неверный аргумент)
+                return
+            load_jira = opts.jira
+            load_gitlab = opts.gitlab
+
+        # Если ни один флаг не указан, загружаем оба источника
+        if not load_jira and not load_gitlab:
+            load_jira = True
+            load_gitlab = True
+
+        # Загрузка данных
+        if load_jira:
+            load_tasks_from_jira()
+        if load_gitlab:
+            load_commits_from_gitlab()
+
 def main():
     manager = WorklogManager()
     session = PromptSession(completer=WorklogCompleter())
@@ -339,6 +381,8 @@ def main():
                     manager.show_status()
                 elif command == 'push':
                     manager.push_entries()
+                elif command == 'pull':
+                    manager.pull_entries(args[1:])
                 elif command == 'edit':
                     manager.edit_entries()
                 else:
@@ -365,6 +409,11 @@ if __name__ == '__main__':
     # Парсер для команды push
     subparsers.add_parser('push', help='Отправить записи в Jira')
 
+    # Изменённый блок для команды pull
+    pull_parser = subparsers.add_parser('pull', help='Получить задачи из Jira и коммиты из gitlab')
+    pull_parser.add_argument('-j', '--jira', action='store_true', help='Загрузить задачи из Jira')
+    pull_parser.add_argument('-g', '--gitlab', action='store_true', help='Загрузить коммиты из GitLab')
+
     # Парсер для команды edit
     subparsers.add_parser('edit', help='Редактировать файл ворклога')
 
@@ -377,6 +426,8 @@ if __name__ == '__main__':
         manager.show_status()
     elif args.command == 'push':
         manager.push_entries()
+    elif args.command == 'pull':
+        manager.pull_entries(jira=args.jira, gitlab=args.gitlab)
     elif args.command == 'edit':
         manager.edit_entries()
     else:
