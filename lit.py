@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, time as dt_time
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
+from parser import pars_store
 
 #TODO Конфигурация дублируется, вынести в отдельный код
 LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
@@ -215,25 +216,45 @@ class WorklogManager:
             print("Нет подготовленных записей.")
             return
 
-        current_date = None
-        for entry in self.entries:
-            date_part = entry.split()[0]
-            if date_part != '#':
-                if date_part != current_date:
-                    print(f"\n{date_part}")
-                    current_date = date_part
-                print(f"  {entry.split(date_part)[1]}")
+        #TODO тоже вынести куда то, дублируется
+        file = open(LIT_STORE, "r", encoding='utf-8')
+        store_dist = pars_store(file.readlines())
+        file.close()
 
-        print('\nЗАПИСИ С ОШИБКАМИ:')
+        #TODO в утилсы
+        def sort_key(item):
+            # Приоритет disabled: сначала None, потом остальные
+            disabled_priority = 0 if item.get('disabled') is None else 1
+
+            # Преобразование даты в объект для сравнения
+            date_str = item.get('date', '31.12.9999')  # Для элементов без даты
+            try:
+                date = datetime.strptime(date_str, '%d.%m.%Y').date()
+            except:
+                date = datetime.max.date()
+
+            # Преобразование времени начала
+            start_str = item.get('start', '23:59')  # Для элементов без времени
+            try:
+                start = datetime.strptime(start_str, '%H:%M').time()
+            except:
+                start = datetime.max.time()
+
+            return (disabled_priority, date, start)
+
+        sorted_data = sorted(store_dist, key=sort_key)
+
         current_date = None
-        for entry in self.entries:
-            hash = entry.split()[0]
-            date_part = entry.split()[1]
-            if hash == '#':
+        for entry in sorted_data:
+            if entry['disabled'] is None:
+                date_part = entry['date']
+
+                # Проверяем изменилась ли дата
                 if date_part != current_date:
                     print(f"\n{date_part}")
                     current_date = date_part
-                print(f"  {entry.split(date_part)[1]}")
+
+                print(f"  {entry['log'].split(date_part)[1].strip('\n')}")
 
     def push_entries(self):
         if not self.entries:
