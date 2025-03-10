@@ -4,7 +4,7 @@ import shlex
 import re
 import subprocess
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time as dt_time
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
@@ -154,6 +154,7 @@ class WorklogManager:
 
         try:
             opts.code = opts.code.upper()
+            input_time = datetime.strptime(opts.time, "%H:%M").time()
 
             # Проверка формата кода задачи
             if not re.match(r'^[A-Z]{2,}-\d+$', opts.code):
@@ -163,12 +164,12 @@ class WorklogManager:
             if opts.code not in TASKS:
                 print(f"⚠️ Внимание: Задача {opts.code} не найдена в системе. Запись будет создана с ручным вводом!")
 
-            if  opts.time > '19:00':
+            if input_time > dt_time(19, 0):
                 print(f"⚠️ Внимание: В задаче {opts.code} указано время начала {opts.time} для даты {opts.date}!")
                 print(f"             Это может вызвать потенциальные проблемы в случае нестандартных часовых поясов!")
                 print(f"             Используйте ключ -t для указания начального времени. Например: -t 10:00 ")
 
-            if  opts.time < '05:00':
+            if input_time < dt_time(5, 0):
                 print(f"⚠️ Внимание: В задаче {opts.code} указано время начала {opts.time} для даты {opts.date}!")
 
             pattern = r'(\d+(?:[.,]\d+)?)([dhmDHM])?'
