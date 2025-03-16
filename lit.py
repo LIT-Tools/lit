@@ -9,6 +9,7 @@ from pathlib import Path
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
+from init import init_config
 from parser import pars_store
 from import_jira import load_tasks_from_jira
 from import_gitlab import load_commits_from_gitlab
@@ -36,7 +37,7 @@ class WorklogCompleter(Completer):
 
         # Автодополнение команд
         if len(text) <= 1 and not document.text_before_cursor.endswith(" "):
-            for cmd in ['add', 'status', 'push', 'pull', 'edit']:
+            for cmd in ['add', 'status', 'push', 'pull', 'edit', 'init']:
                 yield Completion(cmd, start_position=-len(text), display=cmd)
             return
 
@@ -72,7 +73,7 @@ class WorklogCompleter(Completer):
                 commit_part = args_after_add[2] if num_args >= 3 else ''
                 commit_messages = COMMITS.get(task_code, [])
                 for commit in commit_messages:
-                    yield Completion(f"'{commit}'", start_position=-len(commit_part),  display=commit)
+                    yield Completion(f"'{commit}'", start_position=-len(commit_part), display=commit)
 
             elif num_args == 3:
                 # Предлагаем все коды задач
@@ -352,6 +353,11 @@ class WorklogManager:
         if load_gitlab:
             load_commits_from_gitlab()
 
+    def init_config(self):
+        """Обертка для инициализации конфига"""
+        init_config()
+
+
 def get_version():
     """Получить версию из pyproject.toml"""
     try:
@@ -387,6 +393,8 @@ def main():
                     manager.pull_entries(args[1:])
                 elif command == 'edit':
                     manager.edit_entries()
+                elif command == 'init':
+                    manager.init_config()
                 else:
                     print("Неизвестная команда")
 
@@ -426,6 +434,9 @@ if __name__ == '__main__':
     # Парсер для команды edit
     subparsers.add_parser('edit', help='Редактировать файл ворклога')
 
+    # Парсер для команды init
+    subparsers.add_parser('init', help='Настроить конфигурацию')
+
     args = parser.parse_args()
     manager = WorklogManager()
 
@@ -439,5 +450,7 @@ if __name__ == '__main__':
         manager.pull_entries(jira=args.jira, gitlab=args.gitlab)
     elif args.command == 'edit':
         manager.edit_entries()
+    elif args.command == 'init':
+        manager.init_config()
     else:
         main()

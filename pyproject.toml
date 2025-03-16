@@ -12,7 +12,8 @@ dependencies = [
     "prompt-toolkit (>=3.0.50,<4.0.0)",
     "jira (>=3.8.0,<4.0.0)",
     "tzlocal (>=5.3,<6.0)",
-    "beautifulsoup4 (>=4.13.3,<5.0.0)"
+    "beautifulsoup4 (>=4.13.3,<5.0.0)",
+    "questionary (>=2.1.0,<3.0.0)"
 ]
 
 [tool.poetry.group.dev.dependencies]
