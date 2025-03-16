@@ -1,5 +1,5 @@
 LIT: Logging In Time
-or
+или, пока не решил
 LIT: Logging Integrated Timekeeper
 ```
 ┌LIT>────────┐
@@ -69,6 +69,27 @@ message - тело сообщения для ворклога
 
 
 `lit edit` открывает системным текстовым редактором файл .litstore
+
+
+в файле .lithistory сохраняются отправленные логи с пометкой id лога 
+
+
+
+```bash
+python -m venv .venv      # создание
+.venv\Scripts\activate    # активация (Windows)
+```
+
+
+```bash
+coverage run -m unittest discover
+coverage report -m
+coverage html
+```
+```bash
+coverage html; Start-Process "file:///$((Resolve-Path htmlcov\index.html).Path)"
+```
+
 
 `lit config` показывает конфиг
 `lit config add <key> <value>` добавляет запись 

@@ -3,7 +3,6 @@ import argparse
 import shlex
 import re
 import subprocess
-import json
 from datetime import datetime, timedelta, time as dt_time
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
@@ -11,50 +10,19 @@ from prompt_toolkit.patch_stdout import patch_stdout
 from parser import pars_store
 from import_jira import load_tasks_from_jira
 from import_gitlab import load_commits_from_gitlab
+from push import add_worklog, jira_connect
+from utils import sort_key, load_dict, safe_split
 
 #TODO Конфигурация дублируется, вынести в отдельный код
 LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
 os.makedirs(LIT_DIR, exist_ok=True)
 LIT_STORE = os.path.join(LIT_DIR, ".litstore")
+LIT_HISTORY = os.path.join(LIT_DIR, ".lithistory")
 COMMITS_FILE = os.path.join(LIT_DIR, "commits.json")
 TASKS_FILE = os.path.join(LIT_DIR, "tasks.json")
 
-#TODO В утилсы
-def load_dict(path_file) -> dict:
-    """Загрузка коммитов из файла"""
-    try:
-        with open(path_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        # Если файла нет - создаём с начальными данными
-        return {}
-    except json.JSONDecodeError:
-        # Битый файл
-        print(f"ERROR: Invalid JSON format.")
-        return {}
-
 COMMITS = load_dict(COMMITS_FILE)
 TASKS = load_dict(TASKS_FILE)
-
-#TODO В утилсы
-def safe_split(text):
-    """
-    Разбирает строку с учётом кавычек.
-    Если остаётся незакрытая кавычка, она дописывается в конец строки.
-    Экранирование не учитывается.
-    """
-    open_quote = None
-    for ch in text:
-        if ch in ("'", '"'):
-            if open_quote is None:
-                open_quote = ch  # начинаем секцию
-            elif open_quote == ch:
-                open_quote = None  # закрываем секцию
-            # Если текущая кавычка не соответствует открытой,
-            # она считается обычным символом внутри кавычек.
-    if open_quote is not None:
-        text += open_quote  # дописываем закрывающую кавычку
-    return shlex.split(text)
 
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
@@ -138,6 +106,7 @@ class WorklogCompleter(Completer):
 class WorklogManager:
     def __init__(self):
         self.entries = []
+        self.history = []
         self._load()
 
     def _load(self):
@@ -152,6 +121,14 @@ class WorklogManager:
         try:
             with open(LIT_STORE, 'w', encoding='utf-8') as f:
                 f.write("\n".join(self.entries) + "\n")  # Добавить + "\n"
+            # print("Файл успешно сохранён.")
+        except Exception as e:
+            print(f"Ошибка при сохранении: {e}")
+
+    def _history(self):
+        try:
+            with open(LIT_HISTORY, 'a', encoding='utf-8') as f:
+                f.write("\n".join(self.history) + "\n")  # Добавить + "\n"
             # print("Файл успешно сохранён.")
         except Exception as e:
             print(f"Ошибка при сохранении: {e}")
@@ -227,37 +204,29 @@ class WorklogManager:
             print("Нет подготовленных записей.")
             return
 
-        #TODO тоже вынести куда то, дублируется
-        file = open(LIT_STORE, "r", encoding='utf-8')
-        store_dist = pars_store(file.readlines())
-        file.close()
-
-        #TODO в утилсы
-        def sort_key(item):
-            # Приоритет disabled: сначала None, потом остальные
-            disabled_priority = 0 if item.get('disabled') is None else 1
-
-            # Преобразование даты в объект для сравнения
-            date_str = item.get('date', '31.12.9999')  # Для элементов без даты
-            try:
-                date = datetime.strptime(date_str, '%d.%m.%Y').date()
-            except:
-                date = datetime.max.date()
-
-            # Преобразование времени начала
-            start_str = item.get('start', '23:59')  # Для элементов без времени
-            try:
-                start = datetime.strptime(start_str, '%H:%M').time()
-            except:
-                start = datetime.max.time()
-
-            return (disabled_priority, date, start)
+        store_dist = pars_store(self.entries)
 
         sorted_data = sorted(store_dist, key=sort_key)
+
+        print("\nПодготовленные записи:")
 
         current_date = None
         for entry in sorted_data:
             if entry['disabled'] is None:
+                date_part = entry['date']
+
+                # Проверяем изменилась ли дата
+                if date_part != current_date:
+                    print(f"\n{date_part}")
+                    current_date = date_part
+
+                print(f"  {entry['log'].split(date_part)[1].strip('\n')}")
+
+        print("\nНе будут оправляться:")
+
+        current_date = None
+        for entry in sorted_data:
+            if entry['disabled'] is not None:
                 date_part = entry['date']
 
                 # Проверяем изменилась ли дата
@@ -272,16 +241,36 @@ class WorklogManager:
             print("Нет записей для отправки.")
             return
 
-        print("\nПодготовленные записи:")
         self.show_status()
-        confirm = input("\nВы уверены что хотите отправить эти записи? [y/N]: ").strip().lower()
+        session = PromptSession()
+        confirm = session.prompt("\nВы уверены что хотите отправить эти записи? [y/N]: ").strip().lower()
 
         if confirm == 'y':
             print("\nОтправка записей в Jira...")
-            # Здесь должна быть логика интеграции с Jira API
-            self.entries = []
+
+            store_dist = pars_store(self.entries)
+
+            errors = []
+            saved = []
+
+            jira = jira_connect()
+
+            for log in store_dist:
+                if not log['disabled']:
+                    id, err = add_worklog(jira, log['code'], log['duration'], log['message'], log['date'], log['start'])
+                    if not id:
+                        errors.append(f'# {log['log'].strip('\n')} # {err}')
+                    else:
+                        saved.append(f'{log['log'].strip('\n')} # {id}')
+                else:
+                    errors.append(f'{log['log'].strip('\n')}')
+
+            self.entries = errors
+            self.history = saved
             self._save()
-            print("Записи успешно отправлены!")
+            self._history()
+            print(f"Записей успешно отправлено: {len(saved)}")
+            print(f"Записей неотправленных записей: {len(errors)}")
         else:
             print("Отмена отправки.")
 
