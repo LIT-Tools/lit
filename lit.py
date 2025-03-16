@@ -3,7 +3,9 @@ import argparse
 import shlex
 import re
 import subprocess
+import tomllib
 from datetime import datetime, timedelta, time as dt_time
+from pathlib import Path
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
@@ -350,6 +352,17 @@ class WorklogManager:
         if load_gitlab:
             load_commits_from_gitlab()
 
+def get_version():
+    """Получить версию из pyproject.toml"""
+    try:
+        path = Path(__file__).parent / "pyproject.toml"
+        with open(path, "rb") as f:
+            data = tomllib.load(f)
+        return data["project"]["version"]
+    except (KeyError, FileNotFoundError):
+        return "0.0.0-dev"
+
+
 def main():
     manager = WorklogManager()
     session = PromptSession(completer=WorklogCompleter())
@@ -387,6 +400,13 @@ def main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Утилита для работы с ворклогами.")
     subparsers = parser.add_subparsers(dest='command', help='Доступные команды')
+
+    parser.add_argument(
+        '-v', '--version',
+        action='version',
+        version=f"lit v{get_version()}",
+        help="Показать версию и выйти"
+    )
 
     # Парсер для команды add
     add_parser = subparsers.add_parser('add', help='Добавить запись в ворклог')
