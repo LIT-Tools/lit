@@ -21,20 +21,29 @@ os.makedirs(LIT_DIR, exist_ok=True)
 COMMITS_FILE = os.path.join(LIT_DIR, "commits.json")
 CONFIG_FILE = os.path.join(LIT_DIR, ".litconfig")
 
-# Создаем конфиг-парсер с сохранением регистра
-config = configparser.RawConfigParser()
-config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
-config.read(CONFIG_FILE)
-
-GITLAB_URL = config.get('gitlab', 'url')
+GITLAB_URL = ''
 # USER_EMAIL = config.get('jira', 'email')
-TOKEN = config.get('gitlab', 'token')
-TARGET_USER = config.get('gitlab', 'login')
-DAYS = int(config.get('gitlab', 'days'))
+TOKEN = ''
+TARGET_USER = ''
+DAYS = ''
+
+def load_config():
+    global GITLAB_URL, TOKEN, TARGET_USER, DAYS
+    # Создаем конфиг-парсер с сохранением регистра
+    config = configparser.RawConfigParser()
+    config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
+    config.read(CONFIG_FILE)
+
+    GITLAB_URL = config.get('gitlab', 'url')
+    TOKEN = config.get('gitlab', 'token')
+    TARGET_USER = config.get('gitlab', 'login')
+    DAYS = int(config.get('gitlab', 'days'))
 
 def load_commits_from_gitlab():
-    if not TOKEN:
-        raise ValueError("Токен GITLAB_TOKEN не найден в переменных окружения")
+    load_config()
+    if not TOKEN or TOKEN == '':
+        print("ОШИБКА: Токен GITLAB_TOKEN не найден в .litconfig")
+        exit()
 
     headers = {'Private-Token': TOKEN}
 

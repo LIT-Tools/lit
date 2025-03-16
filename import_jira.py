@@ -20,16 +20,23 @@ os.makedirs(LIT_DIR, exist_ok=True)
 TASKS_FILE = os.path.join(LIT_DIR, "tasks.json")
 CONFIG_FILE = os.path.join(LIT_DIR, ".litconfig")
 
-# Создаем конфиг-парсер с сохранением регистра
-config = configparser.RawConfigParser()
-config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
-config.read(CONFIG_FILE)
-
-JIRA_URL = config.get('jira', 'url')
+JIRA_URL = ''
 # USER_EMAIL = config.get('jira', 'email')
-PASS = config.get('jira', 'pass')
-TARGET_USER = config.get('jira', 'login')
-DAYS = int(config.get('jira', 'days'))
+PASS = ''
+TARGET_USER = ''
+DAYS = ''
+
+def load_config():
+    global JIRA_URL, PASS, TARGET_USER, DAYS
+    # Создаем конфиг-парсер с сохранением регистра
+    config = configparser.RawConfigParser()
+    config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
+    config.read(CONFIG_FILE)
+
+    JIRA_URL = config.get('jira', 'url')
+    PASS = config.get('jira', 'pass')
+    TARGET_USER = config.get('jira', 'login')
+    DAYS = int(config.get('jira', 'days'))
 
 #TODO вынести в отдельный конектор или утилсы
 def pars_error_jira(e):
@@ -51,6 +58,7 @@ def pars_error_jira(e):
 
 
 def load_tasks_from_jira():
+    load_config()
     #TODO вынести в отдельный конектор
     AUTH = (TARGET_USER, PASS)
     # Создаем клиент Jira с базовой аутентификацией

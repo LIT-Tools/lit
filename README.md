@@ -114,6 +114,12 @@ days = 30
 
 ## 📦 Установка из исходников
 
+Mac
+```bash
+python3 -m ensurepip --upgrade
+python3 -m pip install poetry
+```
+
 Установите Poetry (если не установлен)
 ```bash
 pip install poetry
@@ -133,7 +139,7 @@ poetry install
 
 Активируйте виртуальное окружение:
 ```bash
-poetry shell
+poetry env activate
 ````
 
 ## 🛠 Тестирование
