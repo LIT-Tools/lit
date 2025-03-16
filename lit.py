@@ -370,6 +370,13 @@ def get_version():
 
 
 def main():
+    welcome_art = r"""
+    ┌LIT>────────┐  Консольная утилита для удобного
+    │ TSK 8h ─○─ │  управления рабочими логами     
+    └─────────╲╲─┘  с интеграцией Jira и GitLab     
+    """
+
+    print("\033[36m" + welcome_art + "\033[0m")  # Цвет cyan
     manager = WorklogManager()
     session = PromptSession(completer=WorklogCompleter())
 
