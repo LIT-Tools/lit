@@ -57,15 +57,24 @@ class WorklogCompleter(Completer):
                 # Предлагаем все коды задач
                 for task in TASKS:
                     yield Completion(task, start_position=0, display=f"{task} - {TASKS[task]}")
+
             elif num_args == 1 and not document.text_before_cursor.endswith(" "):
-                # Предлагаем коды задач, начинающиеся с введенной части
-                task_part = args_after_add[0].upper()
+                # Ищем в номере задачи и названии (регистронезависимо)
+                user_input = args_after_add[0].lower()
                 for task in TASKS:
-                    if task_part in task:
+                    task_lower = task.lower()
+                    desc_lower = TASKS[task].lower()
+
+                    # Проверяем совпадение в коде или описании
+                    if user_input in task_lower or user_input in desc_lower:
+                        display_text = f"{task} - {TASKS[task]}"
+                        # Вычисляем смещение для подсветки
+                        start_pos = -len(args_after_add[0])
                         yield Completion(
                             task,
-                            start_position=-len(task_part),
-                            display=f"{task} - {TASKS[task]}"
+                            start_position=start_pos,
+                            display=display_text,
+                            display_meta=f"Найдено в {'коде' if user_input in task_lower else 'описании'}"
                         )
 
             elif num_args == 1:
