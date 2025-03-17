@@ -1,8 +1,6 @@
 # LIT: Logging Integrated Timekeeper
 
-<img src="https://img.shields.io/badge/python-3.8+-blue?logo=python" alt="Python Version"> 
-<img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-<img src="https://img.shields.io/badge/coverage-51%25-yellow" alt="Coverage">
+<img src="https://img.shields.io/badge/python-3.9+-blue?logo=python" alt="Python Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/coverage-51%25-yellow" alt="Coverage">
 
 Консольная утилита для удобного управления рабочими логами с интеграцией Jira и GitLab
 
@@ -114,6 +112,12 @@ days = 30
 
 ## 📦 Установка из исходников
 
+Mac
+```bash
+python3 -m ensurepip --upgrade
+python3 -m pip install poetry
+```
+
 Установите Poetry (если не установлен)
 ```bash
 pip install poetry
@@ -133,7 +137,7 @@ poetry install
 
 Активируйте виртуальное окружение:
 ```bash
-poetry shell
+poetry env activate
 ````
 
 ## 🛠 Тестирование
@@ -167,6 +171,7 @@ coverage html && xdg-open htmlcov/index.html
 - [ ] Рефакторинг дублирующего кода
 - [ ] Рефакторинг архитектуры под классический питонячий формат 
 - [ ] Повысить покрытие тестами 80+%
+- [x] Понизить версию питона 
 
 ### 🤔 Возможное функции, но под вопросом:
 

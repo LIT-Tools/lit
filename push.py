@@ -10,17 +10,27 @@ LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
 os.makedirs(LIT_DIR, exist_ok=True)
 CONFIG_FILE = os.path.join(LIT_DIR, ".litconfig")
 
-# Создаем конфиг-парсер с сохранением регистра
-config = configparser.RawConfigParser()
-config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
-config.read(CONFIG_FILE)
+JIRA_URL = ''
+# USER_EMAIL = config.get('jira', 'email')
+PASS = ''
+TARGET_USER = ''
+DAYS = ''
 
-JIRA_URL = config.get('jira', 'url')
-PASS = config.get('jira', 'pass')
-TARGET_USER = config.get('jira', 'login')
+def load_config():
+    global JIRA_URL, PASS, TARGET_USER, DAYS
+    # Создаем конфиг-парсер с сохранением регистра
+    config = configparser.RawConfigParser()
+    config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
+    config.read(CONFIG_FILE)
+
+    JIRA_URL = config.get('jira', 'url')
+    PASS = config.get('jira', 'pass')
+    TARGET_USER = config.get('jira', 'login')
+    DAYS = int(config.get('jira', 'days'))
 
 # TODO вынести в отдельный конектор
 def jira_connect():
+    load_config()
     AUTH = (TARGET_USER, PASS)
     # Создаем клиент Jira с базовой аутентификацией
     try:

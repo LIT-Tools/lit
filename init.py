@@ -81,20 +81,26 @@ def init_config():
         default=default.get("gitlab", "login", fallback=user_login)
     ).ask()
 
+    # Сначала запрашиваем URL
+    gitlab_url = questionary.text(
+        "GitLab URL:",
+        default=default.get("gitlab", "url", fallback="https://gitlab.zebrains.team")
+    ).ask()
+
+    # Теперь используем полученный URL для формирования инструкции
+    gitlab_token_instruction = f"\n  [Получить токен: {gitlab_url}/-/user_settings/personal_access_tokens]"
+
     config["gitlab"] = {
         "login": gitlab_login,
         "email": questionary.text(
             "GitLab email:",
             default=default.get("gitlab", "email", fallback=user_email)
         ).ask(),
-        "url": questionary.text(
-            "GitLab URL:",
-            default=default.get("gitlab", "url", fallback="https://gitlab.zebrains.team")
-        ).ask(),
+        "url": gitlab_url,  # Используем сохраненное значение
         "token": questionary.password(
             "GitLab access token:",
             default=default.get("gitlab", "token", fallback=""),
-            instruction=f"\n  [Получить токен: {default.get("gitlab", "url")}/-/user_settings/personal_access_tokens]"
+            instruction=gitlab_token_instruction
         ).ask(),
         "days": questionary.text(
             "Days to sync:",

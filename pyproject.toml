@@ -7,7 +7,7 @@ authors = [
 ]
 license = {text = "MIT"}
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.9"
 dependencies = [
     "prompt-toolkit (>=3.0.50,<4.0.0)",
     "jira (>=3.8.0,<4.0.0)",
