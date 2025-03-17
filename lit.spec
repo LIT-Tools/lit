@@ -3,11 +3,16 @@ from PyInstaller.utils.hooks import collect_data_files
 
 block_cipher = None
 
+# Собираем данные, включая статические файлы из пакета lit
+datas = collect_data_files('lit')
+# Добавляем pyproject.toml в корневую директорию сборки
+datas.append(('pyproject.toml', '.'))
+
 a = Analysis(
     ['lit.py'],  # Путь к главному файлу
     pathex=[],
     binaries=[],
-    datas=collect_data_files('lit'),  # Для статических файлов
+    datas=datas,  # Передаём собранные данные
     hiddenimports=[],  # Скрытые зависимости
     hookspath=[],
     hooksconfig={},
@@ -35,7 +40,7 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,  # Для консольных приложений
-    onefile=True,  # Вместо --onefile в командной строке
+    onefile=True,  # Собираем в один файл
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

@@ -140,6 +140,19 @@ poetry install
 poetry env activate
 ````
 
+## 🔨 Сборка
+```bash
+# Windows
+poetry run pyinstaller lit.spec --distpath dist/windows
+
+# Linux/macOS (на соответствующих системах)
+# poetry run pyinstaller lit.spec --distpath dist/linux
+```
+
+```bash
+.\dist\windows\lit.exe --version
+```
+
 ## 🛠 Тестирование
 
 1. Установите dev-зависимости:
