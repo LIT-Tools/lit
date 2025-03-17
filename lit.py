@@ -37,8 +37,15 @@ class WorklogCompleter(Completer):
 
         # Автодополнение команд
         if len(text) <= 1 and not document.text_before_cursor.endswith(" "):
+            current_input_part = text[0] if text else ''
+            current_input = current_input_part.lower()
             for cmd in ['add', 'status', 'push', 'pull', 'edit', 'init']:
-                yield Completion(cmd, start_position=-len(text), display=cmd)
+                if cmd.startswith(current_input):
+                    yield Completion(
+                        cmd,
+                        start_position=-len(current_input_part),
+                        display=cmd
+                    )
             return
 
         # Автодополнение для команды add
