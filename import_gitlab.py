@@ -43,7 +43,7 @@ def load_commits_from_gitlab():
     load_config()
     if not TOKEN or TOKEN == '':
         print("ОШИБКА: Токен GITLAB_TOKEN не найден в .litconfig")
-        exit()
+        return
 
     headers = {'Private-Token': TOKEN}
 
