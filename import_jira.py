@@ -94,8 +94,8 @@ def load_tasks_from_jira():
     end_date = today.strftime(date_format)
 
     # Формируем JQL запросы
-    jql_assignee = f'assignee = "{TARGET_USER}" AND updated >= "{start_date}" AND updated <= "{end_date}"'
-    jql_worklog = f'worklogAuthor = "{TARGET_USER}" AND worklogDate >= "{start_date}" AND worklogDate <= "{end_date}"'
+    jql_assignee = f'assignee = "{TARGET_USER}" AND updated >= "{start_date}"'
+    jql_worklog = f'worklogAuthor = "{TARGET_USER}" AND worklogDate >= "{start_date}"'
 
     def get_all_issues(jql_query):
         """Получаем все задачи по JQL-запросу с пагинацией"""
