@@ -4,6 +4,7 @@ import shlex
 import re
 import subprocess
 import tomllib
+import sys
 from datetime import datetime, timedelta, time as dt_time
 from pathlib import Path
 from prompt_toolkit import PromptSession
@@ -15,6 +16,8 @@ from import_jira import load_tasks_from_jira
 from import_gitlab import load_commits_from_gitlab
 from push import add_worklog, jira_connect
 from utils import sort_key, load_dict, safe_split
+
+sys.stdout.reconfigure(encoding='utf-8')
 
 #TODO Конфигурация дублируется, вынести в отдельный код
 LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
