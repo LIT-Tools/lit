@@ -112,45 +112,54 @@ days = 30
 
 ## 📦 Установка из исходников
 
-Mac
+### 🍏 Mac
 ```bash
-python3 -m ensurepip --upgrade
-python3 -m pip install poetry
+# Установка Poetry (рекомендуется через Homebrew)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install poetry
+
+#  Для управления версиями Python (опционально, но рекомендуется)
+brew install pyenv
+echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
+echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
+echo 'eval "$(pyenv init -)"' >> ~/.zshrc
+source ~/.zshrc
+
+# Установка нужной версии Python (пример для 3.12)
+pyenv install 3.12
+pyenv global 3.12
+
+git clone https://github.com/LIT-Tools/lit.git
+cd lit
+
+poetry install
+source .venv/bin/activate  # Для bash/zsh
 ```
 
-Установите Poetry (если не установлен)
-```bash
-pip install poetry
-```
+### 🐧 Linux
+*WIP...*
 
-Клонируйте репозиторий и установите зависимости:
+### 🪟 Windows
+
+PowerShell:
+```bash
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+\* *В PS может потребоваться разрешение на запуск локальных скриптов*
+
 ```bash
 git clone https://github.com/LIT-Tools/lit.git
 cd lit
 poetry install
+.\.venv\Scripts\activate
+# or
+poetry env activate 
 ```
-
-Установите зависимости:
-```bash
-poetry install
-```
-
-Активируйте виртуальное окружение:
-```bash
-poetry env activate
-````
 
 ## 🔨 Сборка
+Windows / Linux / macOS
 ```bash
-# Windows
-poetry run pyinstaller lit.spec --distpath dist/windows
-
-# Linux/macOS (на соответствующих системах)
-# poetry run pyinstaller lit.spec --distpath dist/linux
-```
-
-```bash
-.\dist\windows\lit.exe --version
+poetry run pyinstaller lit.spec
 ```
 
 ## 🛠 Тестирование
@@ -178,7 +187,7 @@ coverage html && xdg-open htmlcov/index.html
 ## 🔮 Планы развития
 
 - [ ] Исправить подсказки ключей для команды `add`, убрать ложные срабатывания
-- [ ] Настроить сборку бинарника
+- [x] Настроить сборку бинарника
 - [x] Опубликовать в интернете для установки
 - [ ] Настроить версионирование
 - [ ] Рефакторинг дублирующего кода
@@ -192,7 +201,7 @@ coverage html && xdg-open htmlcov/index.html
 `lit config` показывает конфиг
 `lit config add <key> <value>` добавляет запись 
 
-В кофиге есть поле `star_time` с непустым значением и пользователь не предал значение через ключ -h 
+В кофиге есть поле `start_time` с непустым значением и пользователь не предал значение через ключ -h 
 то используем start_time как начальное время лога. Это защита если спец будет вносить логи поздно ночью
 
 ## ⚠️ Особенности работы валидации
