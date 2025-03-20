@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
@@ -47,10 +47,10 @@ jobs:
         id: release
         uses: google-github-actions/release-please-action@v3
         with:
-          release-type: simple
+          release-type: python
           package-name: lit
           version-file: pyproject.toml
-#          manifest-file: pyproject.toml
+          manifest-file: pyproject.toml
 #          changelog-types: |
 #            feat: Features
 #            fix: Bug Fixes
