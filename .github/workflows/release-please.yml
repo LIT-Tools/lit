@@ -1,6 +1,5 @@
 name: Release Automation
 
-
 on:
   push:
     branches: [master, 'ci/**']
