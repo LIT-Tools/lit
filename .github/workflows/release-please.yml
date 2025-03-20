@@ -47,9 +47,10 @@ jobs:
         id: release
         uses: google-github-actions/release-please-action@v3
         with:
-          release-type: python
+          release-type: simple
           package-name: lit
           version-file: pyproject.toml
+#          manifest-file: pyproject.toml
 #          changelog-types: |
 #            feat: Features
 #            fix: Bug Fixes
