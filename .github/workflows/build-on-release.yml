@@ -1,0 +1,86 @@
+name: Build on Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            dist_dir: windows
+            archive_ext: zip
+            binary_name: lit.exe
+            spec_args: lit.spec
+            content_type: application/zip
+          - os: ubuntu-latest
+            dist_dir: linux
+            archive_ext: tar.gz
+            binary_name: lit
+            spec_args: lit.spec
+            content_type: application/gzip
+          - os: macos-latest
+            dist_dir: macos
+            archive_ext: tar.gz
+            binary_name: lit
+            spec_args: lit.spec
+            content_type: application/gzip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}  # Используем тег из релиза
+
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Poetry (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
+          echo "$env:APPDATA\Python\Scripts" >> $env:GITHUB_PATH
+
+      - name: Install System Dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        run: choco install 7zip
+
+      - name: Install Poetry (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        uses: snok/install-poetry@v1
+
+      - name: Install Dependencies
+        run: poetry install --no-dev
+
+      - name: Build binary
+        run: |
+          poetry run pyinstaller ${{ matrix.spec_args }} --distpath dist/${{ matrix.dist_dir }}
+          mv dist/${{ matrix.dist_dir }}/lit* .
+
+      - name: Create archive
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            7z a -tzip ${{ matrix.asset_name }} lit.exe
+          else
+            tar -czf ${{ matrix.asset_name }} lit
+          fi
+
+      - name: Upload Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./${{ matrix.asset_name }}
+          asset_name: ${{ matrix.asset_name }}
+          asset_content_type: ${{ matrix.content_type }}
