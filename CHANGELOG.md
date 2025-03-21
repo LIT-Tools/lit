@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/LIT-Tools/lit/compare/v0.1.0...v0.2.0) (2025-03-21)
+
+
+### Features
+
+* build test ([dd57418](https://github.com/LIT-Tools/lit/commit/dd5741870d38890609e94a3fb0e7ad8d568754a9))
+
 ## 0.1.0 (2025-03-21)
 
 
