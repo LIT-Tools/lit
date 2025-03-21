@@ -1,0 +1,145 @@
+name: Release Automation
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  test:
+#    if: "!contains(github.event.head_commit.message, 'release-please--branches--master')"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Install Dependencies
+        run: poetry install --with dev
+
+      - name: Run Tests
+        run: poetry run coverage run -m unittest discover
+
+      - name: Coverage Report
+        run: poetry run coverage report -m
+
+  release-prepare:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.release.outputs.upload_url }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Release Please
+        id: release
+        uses: google-github-actions/release-please-action@v3
+        with:
+          release-type: python
+          package-name: lit
+          version-file: pyproject.toml
+          manifest-file: pyproject.toml
+
+  build:
+    if: "contains(github.event.head_commit.message, 'release-please--branches--master')"
+    needs: release-prepare
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            dist_dir: windows
+            archive_ext: zip
+            binary_name: lit.exe
+            spec_args: lit.spec
+            content_type: application/zip
+          - os: ubuntu-latest
+            dist_dir: linux
+            archive_ext: tar.gz
+            binary_name: lit
+            spec_args: lit.spec
+            content_type: application/gzip
+          - os: macos-latest
+            dist_dir: macos
+            archive_ext: tar.gz
+            binary_name: lit
+            spec_args: lit.spec
+            content_type: application/gzip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install System Dependencies
+        if: matrix.os == 'windows-latest'
+        run: choco install 7zip
+
+      - name: Install Poetry (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
+          echo "$env:APPDATA\Python\Scripts" >> $env:GITHUB_PATH
+
+      - name: Install Poetry (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        uses: snok/install-poetry@v1
+
+      - name: Install Dependencies
+        run: poetry install
+
+      - name: Build binary with PyInstaller
+        run: poetry run pyinstaller ${{ matrix.spec_args }} --distpath dist/${{ matrix.dist_dir }}
+
+      - name: Move binary (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          Move-Item -Path "dist\windows\lit.exe" -Destination .
+          .\lit.exe --version
+        shell: pwsh
+
+      - name: Move binary (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          mv "dist/${{ matrix.dist_dir }}/${{ matrix.binary_name }}" .
+          chmod +x ./lit
+          ./lit --version
+
+      - name: Create archive (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          $ASSET_NAME = "lit-${{ matrix.dist_dir }}.${{ matrix.archive_ext }}"
+          7z a -tzip $ASSET_NAME ${{ matrix.binary_name }}
+          Write-Output "ASSET_NAME=$ASSET_NAME" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Output "CONTENT_TYPE=${{ matrix.content_type }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: pwsh
+
+      - name: Create archive (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          ASSET_NAME="lit-${{ matrix.dist_dir }}.${{ matrix.archive_ext }}"
+          tar -czf $ASSET_NAME ${{ matrix.binary_name }}
+          echo "ASSET_NAME=$ASSET_NAME" >> $GITHUB_ENV
+          echo "CONTENT_TYPE=${{ matrix.content_type }}" >> $GITHUB_ENV
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release-prepare.outputs.upload_url }}
+          asset_path: ./${{ env.ASSET_NAME }}
+          asset_name: ${{ env.ASSET_NAME }}
+          asset_content_type: ${{ env.CONTENT_TYPE }}
