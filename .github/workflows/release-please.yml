@@ -98,15 +98,14 @@ jobs:
       - name: Install Dependencies
         run: poetry install
 
-      - name: Build binary with PyInstaller
-        run: |
-          poetry run pyinstaller ${{ matrix.spec_args }} --distpath dist/${{ matrix.dist_dir }}
-          # Кроссплатформенное перемещение файла
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            move dist\${{ matrix.dist_dir }}\${{ matrix.binary_name }} .
-          else
-            mv dist/${{ matrix.dist_dir }}/${{ matrix.binary_name }} .
-          fi
+      - name: Move binary (Windows)
+        if: matrix.os == 'windows-latest'
+        run: Move-Item -Path "dist\windows\lit.exe" -Destination .
+        shell: pwsh
+
+      - name: Move binary (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: mv "dist/${{ matrix.dist_dir }}/${{ matrix.binary_name }}" .
 
       - name: Create archive
         run: |
