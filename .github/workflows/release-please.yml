@@ -103,25 +103,56 @@ jobs:
 
       - name: Move binary (Windows)
         if: matrix.os == 'windows-latest'
-        run: Move-Item -Path "dist\windows\lit.exe" -Destination .
+        run: |
+          Move-Item -Path "dist\windows\lit.exe" -Destination .
+          .\lit.exe --version
         shell: pwsh
 
       - name: Move binary (Linux/macOS)
         if: matrix.os != 'windows-latest'
-        run: mv "dist/${{ matrix.dist_dir }}/${{ matrix.binary_name }}" .
+        run: |
+          mv "dist/${{ matrix.dist_dir }}/${{ matrix.binary_name }}" .
+          chmod +x ./lit
+          ./lit --version
 
-      - name: Create archive
+#      - name: Verify binary version (Windows)
+#        if: matrix.os == 'windows-latest'
+#        run: |
+#          $VERSION = ${{ needs.release-prepare.outputs.tag_name }}.Substring(1)
+#          $BINARY_VERSION = .\lit.exe --version
+#          if ($BINARY_VERSION -notmatch $VERSION) {
+#            Write-Error "Version mismatch! Expected: $VERSION, Got: $BINARY_VERSION"
+#            exit 1
+#          }
+#        shell: pwsh
+#
+#      - name: Verify binary version (Linux/macOS)
+#        if: matrix.os != 'windows-latest'
+#        run: |
+#          chmod +x ./lit
+#          EXPECTED_VERSION=${{ needs.release-prepare.outputs.tag_name#v }}
+#          ACTUAL_VERSION=$(./lit --version)
+#          if [[ "$ACTUAL_VERSION" != *"$EXPECTED_VERSION"* ]]; then
+#            echo "Version mismatch! Expected: $EXPECTED_VERSION, Got: $ACTUAL_VERSION"
+#            exit 1
+#          fi
+
+
+
+      - name: Create archive (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          $ASSET_NAME = "lit-${{ matrix.dist_dir }}.${{ matrix.archive_ext }}"
+          7z a -tzip $ASSET_NAME ${{ matrix.binary_name }}
+          Write-Output "ASSET_NAME=$ASSET_NAME" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Output "CONTENT_TYPE=${{ matrix.content_type }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+        shell: pwsh
+
+      - name: Create archive (Linux/macOS)
+        if: matrix.os != 'windows-latest'
         run: |
           ASSET_NAME="lit-${{ matrix.dist_dir }}.${{ matrix.archive_ext }}"
-          echo "Asset name: $ASSET_NAME"
-
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            # Для Windows используем Compress-Archive (если runner Windows, можно и через PowerShell)
-            7z a -tzip $ASSET_NAME ${{ matrix.binary_name }}
-          else
-            tar -czf $ASSET_NAME ${{ matrix.binary_name }}
-          fi
-
+          tar -czf $ASSET_NAME ${{ matrix.binary_name }}
           echo "ASSET_NAME=$ASSET_NAME" >> $GITHUB_ENV
           echo "CONTENT_TYPE=${{ matrix.content_type }}" >> $GITHUB_ENV
 
