@@ -6,40 +6,38 @@ on:
       - master
 
 jobs:
-#  test:
-#    runs-on: ubuntu-latest
-#    strategy:
-#      matrix:
-#        python-version: ["3.9", "3.10", "3.11", "3.12"]
-#    steps:
-#      - uses: actions/checkout@v4
-#
-#      - name: Setup Python
-#        uses: actions/setup-python@v4
-#        with:
-#          python-version: ${{ matrix.python-version }}
-#
-#      - name: Install Poetry
-#        uses: snok/install-poetry@v1
-#
-#      - name: Install Dependencies
-#        run: poetry install --with dev
-#
-#      - name: Run Tests
-#        run: poetry run coverage run -m unittest discover
-#
-#      - name: Coverage Report
-#        run: poetry run coverage report -m
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
+      - name: Install Dependencies
+        run: poetry install --with dev
+
+      - name: Run Tests
+        run: poetry run coverage run -m unittest discover
+
+      - name: Coverage Report
+        run: poetry run coverage report -m
 
 
 
 
   release-prepare:
-#    needs: test
+    needs: test
     runs-on: ubuntu-latest
     steps:
-#      - uses: actions/checkout@v4
-
       - name: Release Please
         uses: google-github-actions/release-please-action@v3
         with:
