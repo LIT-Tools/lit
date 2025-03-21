@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    if: "!contains(github.event.head_commit.message, 'release-please--branches--master')"
+#    if: "!contains(github.event.head_commit.message, 'release-please--branches--master')"
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -121,30 +121,6 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           sudo codesign --force --deep --sign - ./lit
-
-#      - name: Verify binary version (Windows)
-#        if: matrix.os == 'windows-latest'
-#        run: |
-#          $VERSION = ${{ needs.release-prepare.outputs.tag_name }}.Substring(1)
-#          $BINARY_VERSION = .\lit.exe --version
-#          if ($BINARY_VERSION -notmatch $VERSION) {
-#            Write-Error "Version mismatch! Expected: $VERSION, Got: $BINARY_VERSION"
-#            exit 1
-#          }
-#        shell: pwsh
-#
-#      - name: Verify binary version (Linux/macOS)
-#        if: matrix.os != 'windows-latest'
-#        run: |
-#          chmod +x ./lit
-#          EXPECTED_VERSION=${{ needs.release-prepare.outputs.tag_name#v }}
-#          ACTUAL_VERSION=$(./lit --version)
-#          if [[ "$ACTUAL_VERSION" != *"$EXPECTED_VERSION"* ]]; then
-#            echo "Version mismatch! Expected: $EXPECTED_VERSION, Got: $ACTUAL_VERSION"
-#            exit 1
-#          fi
-
-
 
       - name: Create archive (Windows)
         if: matrix.os == 'windows-latest'
