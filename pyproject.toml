@@ -1,6 +1,6 @@
 [project]
 name = "lit"
-version = "1.0.0"
+version = "1.0.1"
 description = "Tool for quickly filling work logs in Jira via CLI"
 authors = [
     {name = "LEXX",email = "s_kushnarev@rambler.ru"}
