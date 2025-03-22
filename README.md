@@ -14,6 +14,19 @@ LIT — это консольная утилита для удобного уп�
 
 Она помогает быстро и удобно вносить записи рабочего времени, предварительно сохраняя их в локальном файле, а затем отправлять в Jira. Помимо основных возможностей логирования, LIT поддерживает автодополнение команд, для быстрой и комфортной работы.
 
+## ⏩ Простой старт
+CLI вариант:
+```bash
+lit add TASK-1752 4 "Убрал из меню ссылку О компании"
+lit push
+```
+Интерактивный вариант:
+```bash
+lit init   # Настраиваем доступы к Jira и GitLab 
+lit pull   # Загружаем справочники для подсказок
+lit        # Заходим в интерактивный режим 
+```
+
 ## Установить или скачать
 
 ### 🐧 Linux [Download](https://github.com/LIT-Tools/lit/releases/latest/download/lit-linux.tar.gz)
@@ -42,11 +55,13 @@ curl -LO https://github.com/LIT-Tools/lit/releases/latest/download/lit-macos.tar
 ### 🪟 Windows [Download](https://github.com/LIT-Tools/lit/releases/latest/download/lit-windows.zip)
 
 ```bash
-irm https://github.com/LIT-Tools/lit/releases/latest/download/lit-windows.zip -OutFile lit-windows.zip; 
-Expand-Archive -Path lit-windows.zip -DestinationPath .; 
-mv .\lit.exe "$env:ProgramFiles\lit\"; 
-$env:PATH += ";$env:ProgramFiles\lit"; 
-[Environment]::SetEnvironmentVariable("PATH", $env:PATH, "User"); 
+irm https://github.com/LIT-Tools/lit/releases/latest/download/lit-windows.zip -OutFile lit-windows.zip
+Expand-Archive -Path lit-windows.zip -DestinationPath . -Force
+$installPath = "$env:USERPROFILE\lit"
+New-Item -Path $installPath -ItemType Directory -Force
+Move-Item -Path .\lit.exe -Destination $installPath -Force
+$env:PATH += ";$installPath"
+[Environment]::SetEnvironmentVariable("PATH", $env:PATH, "User")
 rm lit-windows.zip
 ```
 
@@ -61,7 +76,7 @@ lit add <код_задачи> <время> "<сообщение>" [опции]
 
 # Примеры:
 lit add TASK-1752 4 "Убрал из меню ссылку О компании"
-lit add TASK-15 "1h 30m" "Исправление крэша" -d 25.12.2023
+lit add TASK-15 "1h 30m" "Исправление крэша" -d 25.12.2023 -t 10:00
 lit add BUG-404 2d "Рефакторинг модуля"
 ```
 
@@ -174,7 +189,48 @@ source .venv/bin/activate  # Для bash/zsh
 ```
 
 ### 🐧 Linux
-*WIP...*
+
+1. Установите системные зависимости
+```bash
+# Для Debian/Ubuntu:
+sudo apt-get update && sudo apt-get install -y \
+    python3 python3-pip python3-venv git curl \
+    build-essential libssl-dev zlib1g-dev
+
+# Для Fedora/RHEL:
+sudo dnf install -y python3 python3-pip python3-virtualenv git curl \
+    gcc openssl-devel bzip2-devel libffi-devel zlib-devel
+```
+
+2. Установите Poetry
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+3. Установите pyenv (опционально, для управления версиями Python)
+```bash
+curl https://pyenv.run | bash
+
+# Добавьте в ~/.bashrc:
+echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+source ~/.bashrc
+
+# Установите нужную версию Python (пример):
+pyenv install 3.12
+pyenv global 3.12
+```
+
+4. Клонируйте репозиторий и установите зависимости
+```bash
+git clone https://github.com/LIT-Tools/lit.git
+cd lit
+poetry install
+poetry shell  # или source .venv/bin/activate
+```
 
 ### 🪟 Windows
 
@@ -227,6 +283,7 @@ coverage html && xdg-open htmlcov/index.html
 - [x] Настроить сборку бинарника
 - [x] Опубликовать в интернете для установки
 - [x] Настроить версионирование
+- [ ] Добавить проверку свежей версии и обновление
 - [ ] Рефакторинг дублирующего кода
 - [ ] Рефакторинг архитектуры под классический питонячий формат 
 - [ ] Повысить покрытие тестами 80+%
@@ -234,12 +291,13 @@ coverage html && xdg-open htmlcov/index.html
 
 ### 🤔 Возможное функции, но под вопросом:
 
-Настройка конфигурации из консоли 
+- Настройка конфигурации из консоли 
 `lit config` показывает конфиг
 `lit config add <key> <value>` добавляет запись 
 
-В кофиге есть поле `start_time` с непустым значением и пользователь не предал значение через ключ -h 
-то используем start_time как начальное время лога. Это защита если спец будет вносить логи поздно ночью
+- В кофиге есть поле `start_time` с непустым значением и пользователь не предал значение через ключ -h то используем start_time как начальное время лога. Это защита если спец будет вносить логи поздно ночью
+
+- Предупреждение если не была произведение конфигурация, файлй `~/.lit/.litconfig` нет.  
 
 ## ⚠️ Особенности работы валидации
 
