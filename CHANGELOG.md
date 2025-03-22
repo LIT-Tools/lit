@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/LIT-Tools/lit/compare/v1.0.0...v1.0.1) (2025-03-22)
+
+
+### Documentation
+
+* added easy start example and fixed manual for install ([076dc4b](https://github.com/LIT-Tools/lit/commit/076dc4bc89badb4ce2a1eeedaa2de1f086f44252))
+* fix license ([3021d85](https://github.com/LIT-Tools/lit/commit/3021d8591e427ea0afdd83089c4849edd4836df8))
+
 ## 1.0.0 (2025-03-22)
 
 
