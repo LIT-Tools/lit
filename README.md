@@ -14,30 +14,32 @@ LIT — это консольная утилита для удобного уп�
 
 Она помогает быстро и удобно вносить записи рабочего времени, предварительно сохраняя их в локальном файле, а затем отправлять в Jira. Помимо основных возможностей логирования, LIT поддерживает автодополнение команд, для быстрой и комфортной работы.
 
-## Установка
+## Установить или скачать
 
-### 🐧 Linux
+### 🐧 Linux [Download](https://github.com/LIT-Tools/lit/releases/latest/download/lit-linux.tar.gz)
 
 ```bash
 curl -LO https://github.com/LIT-Tools/lit/releases/latest/download/lit-linux.tar.gz \
 && tar -xzf lit-linux.tar.gz \
 && chmod +x lit \
+&& sudo mkdir -p /usr/local/bin \
 && sudo mv lit /usr/local/bin/ \
 && rm lit-linux.tar.gz
 ```
 
-### 🍏 Mac
+### 🍏 Mac [Download](https://github.com/LIT-Tools/lit/releases/latest/download/lit-macos.tar.gz)
 
 ```bash
 curl -LO https://github.com/LIT-Tools/lit/releases/latest/download/lit-macos.tar.gz \
 && tar -xzf lit-macos.tar.gz \
 && chmod +x lit \
 && (xattr -d com.apple.quarantine lit 2>/dev/null || true) \
+&& sudo mkdir -p /usr/local/bin \
 && sudo mv lit /usr/local/bin/ \
 && rm lit-macos.tar.gz
 ```
 
-### 🪟 Windows
+### 🪟 Windows [Download](https://github.com/LIT-Tools/lit/releases/latest/download/lit-windows.zip)
 
 ```bash
 irm https://github.com/LIT-Tools/lit/releases/latest/download/lit-windows.zip -OutFile lit-windows.zip; 
