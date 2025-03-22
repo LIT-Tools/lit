@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/LIT-Tools/lit/compare/v0.1.0...v1.2.0) (2025-03-22)
+
+
+### Features
+
+* easy start ([a67a3a8](https://github.com/LIT-Tools/lit/commit/a67a3a8a6d88205ca9a246e0c9f5182e8e1a3717))
+
 ## 0.1.0 (2025-03-21)
 
 
