@@ -169,6 +169,33 @@ class TestWorklogManager(unittest.TestCase):
         # Проверяем, что запись корректно записана в файл
         mock_file().write.assert_called_with(expected_entry)
 
+class TestWorklogCompleter(unittest.TestCase):
+    def setUp(self):
+        self.completer = WorklogCompleter()
+        # Имитируем данные для автодополнения
+        global TASKS
+        TASKS.clear()
+        TASKS.update({
+            "TASK-123": "Test Task 1",
+            "PROJ-456": "Test Project Task"
+        })
+
+    def test_command_completion_basic(self):
+        # Пустой ввод
+        doc = Document(text="")
+        completions = list(self.completer.get_completions(doc, None))
+        self.assertEqual(
+            {c.text for c in completions},
+            {'add', 'status', 'push', 'pull', 'edit', 'init'}
+        )
+
+    def test_command_completion_partial(self):
+        # Частичный ввод "p"
+        doc = Document(text="p")
+        completions = list(self.completer.get_completions(doc, None))
+        self.assertEqual([c.text for c in completions], ['push', 'pull'])
+
+
 class TestWorklogCompleterError(unittest.TestCase):
     def test_unclosed_single_quotation_mark(self):
         completer = WorklogCompleter()
