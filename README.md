@@ -269,12 +269,14 @@ coverage report -m
 ```
 
 3. Откройте отчёт:
-```bash
-# Windows
-coverage html; Start-Process "htmlcov/index.html"
 
-# Linux/Mac
-coverage html && xdg-open htmlcov/index.html
+Windows
+```bash
+coverage html; Start-Process "htmlcov/index.html"
+```
+Linux / Mac
+```bash
+coverage html && open htmlcov/index.html
 ```
 
 ## 🔮 Планы развития
