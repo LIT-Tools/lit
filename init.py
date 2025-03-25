@@ -42,9 +42,16 @@ def init_config():
         validate=lambda val: len(val) > 0 or "Логин обязателен"
     ).ask()
 
+    editor = questionary.text(
+        "Editor:",
+        default=default.get("user", "editor", fallback=""),
+        instruction="\n  [Команда или путь до текстового редактора для команды edit (не обязательно)]"
+    ).ask()
+
     config["user"] = {
         "login": user_login,
-        "email": user_email
+        "email": user_email,
+        "editor": editor
     }
 
     # Секция [jira]

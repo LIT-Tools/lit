@@ -1,3 +1,4 @@
+import configparser
 import os
 import argparse
 import shlex
@@ -23,9 +24,20 @@ LIT_STORE = os.path.join(LIT_DIR, ".litstore")
 LIT_HISTORY = os.path.join(LIT_DIR, ".lithistory")
 COMMITS_FILE = os.path.join(LIT_DIR, "commits.json")
 TASKS_FILE = os.path.join(LIT_DIR, "tasks.json")
+CONFIG_FILE = os.path.join(LIT_DIR, ".litconfig")
 
 COMMITS = load_dict(COMMITS_FILE)
 TASKS = load_dict(TASKS_FILE)
+CUSTOM_EDITOR = ''
+
+def load_config():
+    global GITLAB_URL, CUSTOM_EDITOR
+    # Создаем конфиг-парсер с сохранением регистра
+    config = configparser.RawConfigParser()
+    config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
+    config.read(CONFIG_FILE)
+
+    CUSTOM_EDITOR = config.get('user', 'editor')
 
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
@@ -308,24 +320,30 @@ class WorklogManager:
 
     def edit_entries(self):
         """Открыть файл .litstore в редакторе"""
+        load_config()
+
         # Определяем редактор по умолчанию для Windows
         if os.name == 'nt':
             default_editor = 'notepad'
         else:
             default_editor = 'vim'
 
-        editor = os.environ.get('EDITOR') or os.environ.get('VISUAL') or default_editor
+        editor = CUSTOM_EDITOR or os.environ.get('EDITOR') or os.environ.get('VISUAL') or default_editor
 
         try:
             # Создаем файл если его нет
-            if not os.path.exists(LIT_STORE):
-                open(LIT_STORE, 'w').close()
+            # if not os.path.exists(LIT_STORE):
+            #     open(LIT_STORE, 'w').close()
 
-            # Для Notepad в Windows используем shell=True
-            if os.name == 'nt' and 'notepad' in editor.lower():
-                subprocess.run(f'"{editor}" "{LIT_STORE}"', shell=True, check=True)
-            else:
-                subprocess.run([editor, LIT_STORE], check=True)
+            cmd = [editor, LIT_STORE]
+            print(cmd)
+            subprocess.run(
+                cmd,
+                shell=(os.name == 'nt'),  # Для Windows используем shell
+                check=True,
+                encoding='utf-8',  # Для корректного отображения ошибок
+                # timeout=3600  # Таймаут 1 час на редактирование
+            )
 
             # Перезагружаем данные в любом случае
             self._load()
