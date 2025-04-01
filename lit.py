@@ -403,7 +403,7 @@ def get_version():
         return "0.0.0-dev"
 
 
-def main():
+def main(parser):
     welcome_art = r"""
     ┌LIT>────────┐  Консольная утилита для удобного
     │ TSK 8h ─○─ │  управления рабочими логами     
@@ -419,6 +419,14 @@ def main():
             try:
                 user_input = session.prompt('lit> ').strip()
                 if not user_input:
+                    continue
+
+                if user_input in ['-h', '--help']:
+                    parser.print_help()
+                    continue
+
+                if user_input in ['-v', '--version']:
+                    print(f"lit v{get_version()}")
                     continue
 
                 args = shlex.split(user_input)
@@ -445,8 +453,8 @@ def main():
             except Exception as e:
                 print(f"Ошибка: {str(e)}")
 
-
-if __name__ == '__main__':
+def create_argument_parser():
+    """Создает и возвращает настроенный парсер аргументов"""
     parser = argparse.ArgumentParser(description="Утилита для работы с ворклогами.")
     subparsers = parser.add_subparsers(dest='command', help='Доступные команды')
 
@@ -478,6 +486,11 @@ if __name__ == '__main__':
     # Парсер для команды init
     subparsers.add_parser('init', help='Настроить конфигурацию')
 
+    return parser
+
+def process_arguments(args=None):
+    """Обрабатывает аргументы командной строки"""
+    parser = create_argument_parser()
     args = parser.parse_args()
     manager = WorklogManager()
 
@@ -494,4 +507,7 @@ if __name__ == '__main__':
     elif args.command == 'init':
         manager.init_config()
     else:
-        main()
+        main(parser)
+
+if __name__ == '__main__':
+    process_arguments()

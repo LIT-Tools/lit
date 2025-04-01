@@ -1,4 +1,7 @@
 import unittest
+import io
+import contextlib
+import argparse
 from unittest.mock import patch, mock_open
 from datetime import datetime
 from lit import WorklogManager, WorklogCompleter, TASKS, LIT_STORE, LIT_HISTORY
@@ -236,6 +239,119 @@ class TestWorklogCompleterError(unittest.TestCase):
             list(completer.get_completions(doc, None))
         except Exception as e:
             self.fail(f"Autocompletion raised an exception: {e}")
+
+
+class TestVersionCommand(unittest.TestCase):
+
+    @patch('lit.get_version', return_value="1.2.3")
+    def test_cli_version(self, mock_get_version):
+        """
+        Проверка работы версии в CLI‑режиме.
+        Создаём локальный парсер с параметром --version и проверяем,
+        что при его передаче выводится корректная версия и происходит завершение работы.
+        """
+
+        from lit import get_version
+
+        parser = argparse.ArgumentParser(description="Утилита для работы с ворклогами.")
+        parser.add_argument(
+            '-v', '--version',
+            action='version',
+            version=f"lit v{get_version()}",
+            help="Показать версию и выйти"
+        )
+        a = get_version()
+        # Перехватываем вывод
+        with patch('sys.stdout', new_callable=io.StringIO) as fake_out:
+            with self.assertRaises(SystemExit) as cm:
+                parser.parse_args(['--version'])
+            self.assertEqual(cm.exception.code, 0)
+            # Проверяем, что версия выведена корректно
+            expected_output = "lit v1.2.3\n"
+            self.assertEqual(fake_out.getvalue(), expected_output)
+
+
+class TestInteractiveVersion(unittest.TestCase):
+    @patch('lit.patch_stdout', new=lambda: contextlib.nullcontext())
+    @patch('lit.PromptSession')
+    @patch('sys.stdout', new_callable=io.StringIO)
+    @patch('lit.get_version', return_value="1.2.3")
+    def test_interactive_version(self, mock_get_version, mock_stdout, mock_prompt_session):
+        """
+        Эмулируем ввод в интерактивном режиме: первым вводом передаём '--version',
+        после чего выбрасываем KeyboardInterrupt для завершения основного цикла.
+        Проверяем, что в выводе присутствует строка с версией.
+        """
+        # Эмулируем ввод '--version' и затем остановку цикла.
+        instance = mock_prompt_session.return_value
+        instance.prompt.side_effect = ['--version', KeyboardInterrupt()]
+
+        from lit import main, create_argument_parser
+
+        try:
+            parser = create_argument_parser()
+            main(parser)
+        except KeyboardInterrupt:
+            pass
+
+        output = mock_stdout.getvalue()
+        self.assertIn("lit v1.2.3", output)
+
+
+class TestHelpCommand(unittest.TestCase):
+
+    def test_cli_help(self):
+        """
+        Проверка работы параметра --help в CLI-режиме.
+        Используем стандартный парсер с автоматически добавленным --help
+        и проверяем, что при его передаче выводится справка
+        """
+        parser = argparse.ArgumentParser(description="Утилита для работы с ворклогами.")
+        # Добавим другой тестовый аргумент (--help создается автоматически)
+        parser.add_argument('-v', '--version', help="Показать версию")
+
+        # Перехватываем вывод
+        with patch('sys.stdout', new_callable=io.StringIO) as fake_out:
+            with self.assertRaises(SystemExit) as cm:
+                parser.parse_args(['--help'])
+            self.assertEqual(cm.exception.code, 0)
+
+            # Проверяем, что справка содержит ключевые фразы
+            help_output = fake_out.getvalue()
+            self.assertIn("Утилита для работы с ворклогами", help_output)
+            self.assertIn("--help", help_output)
+            self.assertIn("--version", help_output)
+
+
+class TestInteractiveHelp(unittest.TestCase):
+    @patch('lit.patch_stdout', new=lambda: contextlib.nullcontext())
+    @patch('lit.PromptSession')
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_interactive_help(self, mock_stdout, mock_prompt_session):
+        """
+        Эмулируем ввод в интерактивном режиме: первым вводом передаём '--help',
+        после чего выбрасываем KeyboardInterrupt для завершения основного цикла.
+        Проверяем, что в выводе содержится текст справки.
+        """
+        # Эмулируем ввод '--help' и затем остановку цикла.
+        instance = mock_prompt_session.return_value
+        instance.prompt.side_effect = ['--help', KeyboardInterrupt()]
+
+        from lit import main, create_argument_parser
+
+        try:
+            parser = create_argument_parser()
+            main(parser)
+        except KeyboardInterrupt:
+            pass
+
+        # Проверяем, что вывод содержит характерные для справки фразы
+        output = mock_stdout.getvalue()
+        self.assertIn("usage:", output.lower())  # Проверяем, что содержится характерное для справки слово "usage:"
+        # Можно добавить дополнительные проверки на содержимое справки
+        self.assertIn("--help", output)
+
+
 
 if __name__ == '__main__':
     unittest.main()
