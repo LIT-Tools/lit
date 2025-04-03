@@ -223,10 +223,13 @@ class WorklogManager:
             start_time = datetime.strptime(f"{opts.date} {opts.time}", "%d.%m.%Y %H:%M")
             end_time = start_time + timedelta(hours=hours)
 
+            # Обработка многострочных сообщений
+            message = opts.message.replace('\n', '\\n')  # Заменяем переносы строк на \n с пробелами
+
             # Форматирование записи
             entry = (
                 f"{formatted_date} [{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}] "
-                f"{opts.code} {opts.hours} `{opts.message}`"
+                f"{opts.code} {opts.hours} `{message}`"
             )
             self.entries.append(entry)
             self._save()
@@ -292,7 +295,8 @@ class WorklogManager:
 
             for log in store_dist:
                 if not log['disabled']:
-                    id, err = add_worklog(jira, log['code'], log['duration'], log['message'], log['date'], log['start'])
+                    message = log['message'].replace("\\n", '\n')
+                    id, err = add_worklog(jira, log['code'], log['duration'], message, log['date'], log['start'])
                     if not id:
                         errors.append(f'# {log['log'].strip('\n')} # {err}')
                     else:

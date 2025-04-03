@@ -2,6 +2,7 @@ import unittest
 import io
 import contextlib
 import argparse
+from pyexpat.errors import messages
 from unittest.mock import patch, mock_open
 from datetime import datetime
 from lit import WorklogManager, WorklogCompleter, TASKS, LIT_STORE, LIT_HISTORY
@@ -37,11 +38,16 @@ class TestWorklogManager(unittest.TestCase):
         mock_datetime.now.return_value = self.MockedDateTime.now()
         mock_datetime.strptime.side_effect = lambda *args: datetime.strptime(*args)
 
+        message = '''первая строка
+        вторая строка'''
+
         self.manager.add_entry(['TASK-123', '7', 'Описание работы'])
         self.manager.add_entry(['TASK-123', '1,5', 'Описание работы'])
         self.manager.add_entry(['TASK-123', '0.5', 'Описание работы'])
         self.manager.add_entry(['TASK-123', '15m', 'Описание работы', '-d', '20.02.2024', '-t', '10:00'])
         self.manager.add_entry(['TASK-123', '1d', 'Описание работы', '-d', '20.02.2024', '-t', '10:00'])
+        self.manager.add_entry(['TASK-123', '1', message, '-d', '21.02.2024', '-t', '10:00'])
+
 
         expected_content = (
             "15.01.2023 [14:30 - 21:30] TASK-123 7h `Описание работы`\n"
@@ -49,6 +55,7 @@ class TestWorklogManager(unittest.TestCase):
             "15.01.2023 [14:30 - 15:00] TASK-123 0,5h `Описание работы`\n"
             "20.02.2024 [10:00 - 10:15] TASK-123 15m `Описание работы`\n"
             "20.02.2024 [10:00 - 18:00] TASK-123 1d `Описание работы`\n"
+            "21.02.2024 [10:00 - 11:00] TASK-123 1h `первая строка\\n        вторая строка`\n"
         )
         mock_file().write.assert_called_with(expected_content)
 
