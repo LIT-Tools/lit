@@ -215,13 +215,17 @@ class WorklogManager:
 
             opts.hours = hours_str.strip().replace('.', ',')
 
+            # Преобразуем дату в объект datetime для правильного форматирования
+            date_obj = datetime.strptime(opts.date, "%d.%m.%Y")
+            formatted_date = date_obj.strftime("%d.%m.%Y")  # Это добавит ведущие нули
+
             # Расчет времени окончания
             start_time = datetime.strptime(f"{opts.date} {opts.time}", "%d.%m.%Y %H:%M")
             end_time = start_time + timedelta(hours=hours)
 
             # Форматирование записи
             entry = (
-                f"{opts.date} [{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}] "
+                f"{formatted_date} [{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}] "
                 f"{opts.code} {opts.hours} `{opts.message}`"
             )
             self.entries.append(entry)
