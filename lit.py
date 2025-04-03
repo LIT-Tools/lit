@@ -37,7 +37,7 @@ def load_config():
     config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
     config.read(CONFIG_FILE)
 
-    CUSTOM_EDITOR = config.get('user', 'editor')
+    CUSTOM_EDITOR = config.get('user', 'editor', fallback='')
 
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
