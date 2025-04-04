@@ -152,7 +152,7 @@ def load_commits_from_gitlab():
         for task in tasks:
             mes = message.replace(task, '')
             if len(mes) > 5:
-                task_commits.setdefault(task, []).append(first_line.replace(task, ''))
+                task_commits.setdefault(task, []).append(first_line.replace(task, '').strip())
                 useful_commits += 1
 
     # Сортируем задачи и удаляем пустые

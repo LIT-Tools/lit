@@ -1,6 +1,6 @@
 # LIT: Logging Integrated Timekeeper
 
-<img src="https://img.shields.io/badge/python-3.9+-blue?logo=python" alt="Python Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/coverage-51%25-yellow" alt="Coverage">
+<img src="https://img.shields.io/badge/python-3.9+-blue?logo=python" alt="Python Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/coverage-83%25-green" alt="Coverage">
 
 Консольная утилита для удобного управления рабочими логами с интеграцией Jira и GitLab
 
@@ -288,7 +288,8 @@ coverage html && open htmlcov/index.html
 - [ ] Добавить проверку свежей версии и обновление
 - [ ] Рефакторинг дублирующего кода
 - [ ] Рефакторинг архитектуры под классический питонячий формат 
-- [ ] Повысить покрытие тестами 80+%
+- [x] Повысить покрытие тестами 80+%
+- [ ] Рефакторинг тестов
 - [x] Понизить версию питона 
 - [ ] Добавить мульти профили что бы подключаться к разным контурам
 
