@@ -1,3 +1,4 @@
+import configparser
 import os
 import argparse
 import shlex
@@ -23,9 +24,20 @@ LIT_STORE = os.path.join(LIT_DIR, ".litstore")
 LIT_HISTORY = os.path.join(LIT_DIR, ".lithistory")
 COMMITS_FILE = os.path.join(LIT_DIR, "commits.json")
 TASKS_FILE = os.path.join(LIT_DIR, "tasks.json")
+CONFIG_FILE = os.path.join(LIT_DIR, ".litconfig")
 
 COMMITS = load_dict(COMMITS_FILE)
 TASKS = load_dict(TASKS_FILE)
+CUSTOM_EDITOR = ''
+
+def load_config():
+    global GITLAB_URL, CUSTOM_EDITOR
+    # Создаем конфиг-парсер с сохранением регистра
+    config = configparser.RawConfigParser()
+    config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
+    config.read(CONFIG_FILE)
+
+    CUSTOM_EDITOR = config.get('user', 'editor', fallback='')
 
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):
@@ -203,14 +215,21 @@ class WorklogManager:
 
             opts.hours = hours_str.strip().replace('.', ',')
 
+            # Преобразуем дату в объект datetime для правильного форматирования
+            date_obj = datetime.strptime(opts.date, "%d.%m.%Y")
+            formatted_date = date_obj.strftime("%d.%m.%Y")  # Это добавит ведущие нули
+
             # Расчет времени окончания
             start_time = datetime.strptime(f"{opts.date} {opts.time}", "%d.%m.%Y %H:%M")
             end_time = start_time + timedelta(hours=hours)
 
+            # Обработка многострочных сообщений
+            message = opts.message.replace('\n', '\\n')  # Заменяем переносы строк на \n с пробелами
+
             # Форматирование записи
             entry = (
-                f"{opts.date} [{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}] "
-                f"{opts.code} {opts.hours} `{opts.message}`"
+                f"{formatted_date} [{start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}] "
+                f"{opts.code} {opts.hours} `{message}`"
             )
             self.entries.append(entry)
             self._save()
@@ -276,7 +295,8 @@ class WorklogManager:
 
             for log in store_dist:
                 if not log['disabled']:
-                    id, err = add_worklog(jira, log['code'], log['duration'], log['message'], log['date'], log['start'])
+                    message = log['message'].replace("\\n", '\n')
+                    id, err = add_worklog(jira, log['code'], log['duration'], message, log['date'], log['start'])
                     if not id:
                         errors.append(f'# {log['log'].strip('\n')} # {err}')
                     else:
@@ -308,24 +328,30 @@ class WorklogManager:
 
     def edit_entries(self):
         """Открыть файл .litstore в редакторе"""
+        load_config()
+
         # Определяем редактор по умолчанию для Windows
         if os.name == 'nt':
             default_editor = 'notepad'
         else:
             default_editor = 'vim'
 
-        editor = os.environ.get('EDITOR') or os.environ.get('VISUAL') or default_editor
+        editor = CUSTOM_EDITOR or os.environ.get('EDITOR') or os.environ.get('VISUAL') or default_editor
 
         try:
             # Создаем файл если его нет
-            if not os.path.exists(LIT_STORE):
-                open(LIT_STORE, 'w').close()
+            # if not os.path.exists(LIT_STORE):
+            #     open(LIT_STORE, 'w').close()
 
-            # Для Notepad в Windows используем shell=True
-            if os.name == 'nt' and 'notepad' in editor.lower():
-                subprocess.run(f'"{editor}" "{LIT_STORE}"', shell=True, check=True)
-            else:
-                subprocess.run([editor, LIT_STORE], check=True)
+            cmd = [editor, LIT_STORE]
+            print(cmd)
+            subprocess.run(
+                cmd,
+                shell=(os.name == 'nt'),  # Для Windows используем shell
+                check=True,
+                encoding='utf-8',  # Для корректного отображения ошибок
+                # timeout=3600  # Таймаут 1 час на редактирование
+            )
 
             # Перезагружаем данные в любом случае
             self._load()
@@ -385,7 +411,7 @@ def get_version():
         return "0.0.0-dev"
 
 
-def main():
+def main(parser):
     welcome_art = r"""
     ┌LIT>────────┐  Консольная утилита для удобного
     │ TSK 8h ─○─ │  управления рабочими логами     
@@ -401,6 +427,14 @@ def main():
             try:
                 user_input = session.prompt('lit> ').strip()
                 if not user_input:
+                    continue
+
+                if user_input in ['-h', '--help']:
+                    parser.print_help()
+                    continue
+
+                if user_input in ['-v', '--version']:
+                    print(f"lit v{get_version()}")
                     continue
 
                 args = shlex.split(user_input)
@@ -427,8 +461,8 @@ def main():
             except Exception as e:
                 print(f"Ошибка: {str(e)}")
 
-
-if __name__ == '__main__':
+def create_argument_parser():
+    """Создает и возвращает настроенный парсер аргументов"""
     parser = argparse.ArgumentParser(description="Утилита для работы с ворклогами.")
     subparsers = parser.add_subparsers(dest='command', help='Доступные команды')
 
@@ -460,6 +494,11 @@ if __name__ == '__main__':
     # Парсер для команды init
     subparsers.add_parser('init', help='Настроить конфигурацию')
 
+    return parser
+
+def process_arguments(args=None):
+    """Обрабатывает аргументы командной строки"""
+    parser = create_argument_parser()
     args = parser.parse_args()
     manager = WorklogManager()
 
@@ -476,4 +515,7 @@ if __name__ == '__main__':
     elif args.command == 'init':
         manager.init_config()
     else:
-        main()
+        main(parser)
+
+if __name__ == '__main__':
+    process_arguments()
