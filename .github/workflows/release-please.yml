@@ -49,9 +49,7 @@ jobs:
           package-name: lit
           version-file: pyproject.toml
           manifest-file: pyproject.toml
-          changelog-types: |
-            feat: Features
-            fix: Bug Fixes
+          changelog-types: '[{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"}]'
 
   build:
     if: "contains(github.event.head_commit.message, 'release-please--branches--master')"
