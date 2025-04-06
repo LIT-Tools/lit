@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.0](https://github.com/LIT-Tools/lit/compare/v1.0.1...v1.1.0) (2025-04-06)
+
+
+### Features
+
+* ability to select a text editor has been added to the configuration ([83e169f](https://github.com/LIT-Tools/lit/commit/83e169fd07fbcaf0258bd024ddcb4f628650008b))
+
+
+### Bug Fixes
+
+* added leading zeros for date ([d1fefb4](https://github.com/LIT-Tools/lit/commit/d1fefb4d84b34499797ac09e9784cde06f1a4fc8)), closes [#60](https://github.com/LIT-Tools/lit/issues/60)
+* fixed error when there was no custom editor in the config ([7a2c702](https://github.com/LIT-Tools/lit/commit/7a2c7022dad194efe06a06f33f330919c19a0c99))
+* handle multiline logs input ([2a00bdb](https://github.com/LIT-Tools/lit/commit/2a00bdbdea6e7693d57c36ac70169de72ee87109)), closes [#61](https://github.com/LIT-Tools/lit/issues/61)
+* now you can call help and check the version in interactive mode ([9518623](https://github.com/LIT-Tools/lit/commit/9518623eb66463af4e1a0cb94522187e01174723)), closes [#59](https://github.com/LIT-Tools/lit/issues/59)
+
 ## [1.0.1](https://github.com/LIT-Tools/lit/compare/v1.0.0...v1.0.1) (2025-03-22)
 
 
