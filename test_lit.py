@@ -596,7 +596,6 @@ class TestEditEntries(unittest.TestCase):
             encoding='utf-8'
         )
         self.mock_load.assert_called_once()
-        self.mock_print.assert_any_call(['notepad', '/fake/path/.litstore'])
         self.mock_print.assert_any_call("✓ Изменения применены")
 
     @patch.dict(os.environ, {'EDITOR': 'nano'}, clear=True)
@@ -609,6 +608,8 @@ class TestEditEntries(unittest.TestCase):
             check=True,
             encoding='utf-8'
         )
+        self.mock_load.assert_called_once()
+        self.mock_print.assert_any_call("✓ Изменения применены")
 
 if __name__ == '__main__':
     unittest.main()

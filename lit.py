@@ -344,7 +344,7 @@ class WorklogManager:
             #     open(LIT_STORE, 'w').close()
 
             cmd = [editor, LIT_STORE]
-            print(cmd)
+
             subprocess.run(
                 cmd,
                 shell=(os.name == 'nt'),  # Для Windows используем shell
