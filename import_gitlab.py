@@ -22,13 +22,12 @@ COMMITS_FILE = os.path.join(LIT_DIR, "commits.json")
 CONFIG_FILE = os.path.join(LIT_DIR, ".litconfig")
 
 GITLAB_URL = ''
-# USER_EMAIL = config.get('jira', 'email')
+USER_EMAIL = ''
 TOKEN = ''
-TARGET_USER = ''
 DAYS = ''
 
 def load_config():
-    global GITLAB_URL, TOKEN, TARGET_USER, DAYS
+    global GITLAB_URL, TOKEN, DAYS, USER_EMAIL
     # Создаем конфиг-парсер с сохранением регистра
     config = configparser.RawConfigParser()
     config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
@@ -36,7 +35,7 @@ def load_config():
 
     GITLAB_URL = config.get('gitlab', 'url')
     TOKEN = config.get('gitlab', 'token')
-    TARGET_USER = config.get('gitlab', 'login')
+    USER_EMAIL = config.get('gitlab', 'email')
     DAYS = int(config.get('gitlab', 'days'))
 
 def load_commits_from_gitlab():
@@ -46,14 +45,6 @@ def load_commits_from_gitlab():
         return
 
     headers = {'Private-Token': TOKEN}
-
-    # Получаем информацию о текущем пользователе
-    response = requests.get(f'{GITLAB_URL}/api/v4/user', headers=headers)
-    response.raise_for_status()
-    user = response.json()
-    username = user['username']
-    #TODO добавить логику в случае пустого конфига gitlab login
-    username = TARGET_USER
 
     # Рассчитываем дату DAYS дней назад
     since_datetime = datetime.now() - timedelta(days=DAYS)
@@ -110,9 +101,6 @@ def load_commits_from_gitlab():
                     headers=headers,
                     params={
                         'since': since_date_iso,
-                        # 'until': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Добавляем верхнюю границу
-                        'author_username': username,
-                        # 'committer_username': username,  # Фильтруем и по коммиттеру
                         'with_stats': False,  # Убираем лишние данные
                         'page': page,
                         'per_page': 100
@@ -125,11 +113,11 @@ def load_commits_from_gitlab():
 
                 for commit in commits:
                     # Проверяем и автора и коммиттера
-                    commit_author = commit['author_email'].split("@")[0]
-                    commit_committer = commit['committer_email'].split("@")[0]
+                    commit_author = commit['author_email']
+                    commit_committer = commit['committer_email']
 
                     if len(commit['message']) > 0 and (
-                            commit_author.lower() == username.lower() or commit_committer.lower() == username.lower()):
+                            commit_author.lower() == USER_EMAIL.lower() or commit_committer.lower() == USER_EMAIL.lower()):
                         if commit['message'].find('Merge branch') == -1:
                             comments.append(commit['message'].rstrip())
 
@@ -158,6 +146,6 @@ def load_commits_from_gitlab():
     # Сортируем задачи и удаляем пустые
     sorted_tasks = {k: v for k, v in sorted(task_commits.items()) if k and v}
 
-    print(f'\rНайдено {useful_commits} пригодных коммитов из {len(comments)} в {len(sorted_tasks)} репозиториях за авторством {username}')
+    print(f'\rНайдено {useful_commits} пригодных коммитов из {len(comments)} в {len(sorted_tasks)} репозиториях за авторством {USER_EMAIL}')
 
     save_commits(sorted_tasks)

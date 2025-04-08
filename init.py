@@ -83,10 +83,6 @@ def init_config():
     }
 
     # Секция [gitlab]
-    gitlab_login = questionary.text(
-        "GitLab login:",
-        default=default.get("gitlab", "login", fallback=user_login)
-    ).ask()
 
     # Сначала запрашиваем URL
     gitlab_url = questionary.text(
@@ -98,7 +94,6 @@ def init_config():
     gitlab_token_instruction = f"\n  [Получить токен: {gitlab_url}/-/user_settings/personal_access_tokens]"
 
     config["gitlab"] = {
-        "login": gitlab_login,
         "email": questionary.text(
             "GitLab email:",
             default=default.get("gitlab", "email", fallback=user_email)

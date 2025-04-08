@@ -44,7 +44,6 @@ class TestInitConfig(unittest.TestCase):
             "jira@example.com",  # Jira email
             "https://jira.test.com",  # Jira URL
             "30",  # Jira days
-            "gitlabuser",  # GitLab login
             "https://gitlab.test.com",  # GitLab URL
             "gitlab@example.com",  # GitLab email
             "30"  # GitLab days
@@ -79,7 +78,6 @@ class TestInitConfig(unittest.TestCase):
         self.assertEqual(config.get("jira", "days"), "30")
 
         # Проверяем секцию [gitlab]
-        self.assertEqual(config.get("gitlab", "login"), "gitlabuser")
         self.assertEqual(config.get("gitlab", "email"), "gitlab@example.com")
         self.assertEqual(config.get("gitlab", "url"), "https://gitlab.test.com")
         self.assertEqual(config.get("gitlab", "token"), "token123")
@@ -108,7 +106,6 @@ class TestInitConfig(unittest.TestCase):
             "days": "60"
         }
         existing_config["gitlab"] = {
-            "login": "oldgitlab",
             "email": "oldgitlab@example.com",
             "url": "https://old.gitlab",
             "token": "oldtoken",
@@ -150,7 +147,6 @@ class TestInitConfig(unittest.TestCase):
             "Jira email:": "jira@example.com",
             "Jira URL:": "https://jira.test.com",
             "Days to sync:": "30",
-            "GitLab login:": "gitlabuser",
             "GitLab URL:": "https://gitlab.test.com",
             "GitLab email:": "gitlab@example.com",
             "Days to sync:": "30"

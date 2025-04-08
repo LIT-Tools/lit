@@ -1,8 +1,9 @@
+
 import unittest
 from unittest.mock import patch, MagicMock
 import import_gitlab
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import io
 import sys
 
@@ -21,7 +22,7 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
         # Установка тестовой конфигурации
         import_gitlab.GITLAB_URL = 'https://gitlab.example.com'
         import_gitlab.TOKEN = 'fake_token'
-        import_gitlab.TARGET_USER = 'test_user'
+        import_gitlab.USER_EMAIL = 'test_user@example.com'
         import_gitlab.DAYS = 7
 
         # Фиксация времени
@@ -58,7 +59,6 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
 
         # Создаём необходимые ответы для всех запросов
         mock_responses = [
-            self.create_response({'username': 'test_user'}),  # /user
             self.create_response([{'id': 1}, {'id': 2}]),  # /projects page1
             self.create_response([]),  # /projects page2 (пустой)
             self.create_response([{  # /projects/1/repository/commits
@@ -73,12 +73,6 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
         self.mock_requests.get.side_effect = mock_responses
 
         import_gitlab.load_commits_from_gitlab()
-
-        # Проверка вызовов API
-        self.mock_requests.get.assert_any_call(
-            'https://gitlab.example.com/api/v4/user',
-            headers={'Private-Token': 'fake_token'}
-        )
 
         self.mock_requests.get.assert_any_call(
             'https://gitlab.example.com/api/v4/projects',
@@ -98,7 +92,6 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
     def test_commit_filtering(self):
         """Тест фильтрации коммитов"""
         self.mock_requests.get.side_effect = [
-            self.create_response({'username': 'test_user'}),
             self.create_response([{'id': 1}]),
             self.create_response([]),
             self.create_response([
@@ -170,7 +163,6 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
     def test_message_parsing(self):
         """Тест парсинга сообщений коммитов"""
         self.mock_requests.get.side_effect = [
-            self.create_response({'username': 'test_user'}),
             self.create_response([{'id': 1}]),
             self.create_response([]),
             self.create_response([
