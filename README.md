@@ -57,11 +57,14 @@ curl -LO https://github.com/LIT-Tools/lit/releases/latest/download/lit-macos.tar
 ```bash
 irm https://github.com/LIT-Tools/lit/releases/latest/download/lit-windows.zip -OutFile lit-windows.zip
 Expand-Archive -Path lit-windows.zip -DestinationPath . -Force
-$installPath = "$env:USERPROFILE\lit"
-New-Item -Path $installPath -ItemType Directory -Force
-Move-Item -Path .\lit.exe -Destination $installPath -Force
-$env:PATH += ";$installPath"
-[Environment]::SetEnvironmentVariable("PATH", $env:PATH, "User")
+$p = "$HOME\lit"
+New-Item -Path $p -ItemType Directory -Force | Out-Null
+Move-Item -Path .\lit.exe -Destination $p -Force
+$curPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+if ($curPath -notmatch "([\W;]|^)$([regex]::Escape($p))([\W;]|$)") {
+    $env:PATH += ";$p"
+    [Environment]::SetEnvironmentVariable('PATH', "$curPath$((';','')[$curPath -eq ''])$p", 'User')
+}
 rm lit-windows.zip
 ```
 
