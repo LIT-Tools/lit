@@ -84,7 +84,7 @@ def init_config():
     ).ask()
 
     # Теперь используем полученный URL для формирования инструкции
-    gitlab_token_instruction = f"\n  [Получить токен: {gitlab_url}/-/user_settings/personal_access_tokens]"
+    gitlab_token_instruction = f"\n  [Получить токен: {gitlab_url}/-/user_settings/personal_access_tokens Select scopes: api]"
 
     config["gitlab"] = {
         "email": questionary.text(
