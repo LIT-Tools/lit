@@ -38,7 +38,6 @@ class TestInitConfig(unittest.TestCase):
         # Ответы для текстовых вопросов (в том порядке, как они вызываются)
         text_answers = [
             "test@example.com",  # User email
-            "testuser",  # User login
             "", # Editor
             "jirauser",  # Jira login
             "https://jira.test.com",  # Jira URL
@@ -67,7 +66,6 @@ class TestInitConfig(unittest.TestCase):
 
         # Проверяем секцию [user]
         self.assertEqual(config.get("user", "email"), "test@example.com")
-        self.assertEqual(config.get("user", "login"), "testuser")
 
         # Проверяем секцию [jira]
         self.assertEqual(config.get("jira", "login"), "jirauser")
@@ -95,7 +93,7 @@ class TestInitConfig(unittest.TestCase):
         """
         # Эмулируем существующий конфиг
         existing_config = configparser.ConfigParser()
-        existing_config["user"] = {"email": "old@example.com", "login": "olduser"}
+        existing_config["user"] = {"email": "old@example.com"}
         existing_config["jira"] = {
             "login": "oldjira",
             "pass": "oldpass",
@@ -138,8 +136,6 @@ class TestInitConfig(unittest.TestCase):
         # Используем email, который даст логин
         answers = {
             "User email:": "user@example.com",
-            # Пустой ответ для логина - пользователь нажал Enter (принял дефолт)
-            "User login:": None,  # Используем None как индикатор принятия дефолта
             "Jira login:": "jirauser",
             "Jira URL:": "https://jira.test.com",
             "Days to sync:": "30",
@@ -174,8 +170,6 @@ class TestInitConfig(unittest.TestCase):
         written = "".join(call.args[0] for call in handle.write.call_args_list)
         config = configparser.RawConfigParser()
         config.read_string(written)
-        # Ожидается, что логин будет сгенерирован как часть email до '@'
-        self.assertEqual(config.get("user", "login"), "user")
 
         # Проверяем что сообщение было выведено
         mock_print.assert_called_with("\n✅ Конфигурация сохранена в .litconfig")

@@ -34,13 +34,6 @@ def init_config():
 
     # Автогенерация логина из email если нет в конфиге
     email_login = user_email.split("@")[0] if "@" in user_email else ""
-    current_login = default.get("user", "login", fallback=email_login)
-
-    user_login = questionary.text(
-        "User login:",
-        default=current_login,
-        validate=lambda val: len(val) > 0 or "Логин обязателен"
-    ).ask()
 
     editor = questionary.text(
         "Editor:",
@@ -49,7 +42,6 @@ def init_config():
     ).ask()
 
     config["user"] = {
-        "login": user_login,
         "email": user_email,
         "editor": editor
     }
@@ -57,7 +49,7 @@ def init_config():
     # Секция [jira]
     jira_login = questionary.text(
         "Jira login:",
-        default=default.get("jira", "login", fallback=user_login)
+        default=default.get("jira", "login", fallback=default.get("user", "login", fallback=email_login))
     ).ask()
     # TODO API token пока почему то не срабатывает, нужно разобраться, сейчас оставил в подсказке только пароль
     jira_pass = questionary.password(
