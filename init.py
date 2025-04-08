@@ -46,6 +46,11 @@ def init_config():
         "editor": editor
     }
 
+    # Проверяем, относится ли пользователь к Zebrains
+    email_parts = user_email.split('@')
+    domain = email_parts[1].lower() if len(email_parts) > 1 else ''
+    is_zebrains_user = 'zebrains' in domain
+
     # Секция [jira]
     jira_login = questionary.text(
         "Jira login:",
@@ -62,7 +67,7 @@ def init_config():
         "pass": jira_pass,
         "url": questionary.text(
             "Jira URL:",
-            default=default.get("jira", "url", fallback="https://jira.itech-group.ru")
+            default=default.get("jira", "url", fallback="https://jira.itech-group.ru" if is_zebrains_user else "")
         ).ask(),
         "days": questionary.text(
             "Days to sync:",
@@ -75,7 +80,7 @@ def init_config():
     # Сначала запрашиваем URL
     gitlab_url = questionary.text(
         "GitLab URL:",
-        default=default.get("gitlab", "url", fallback="https://gitlab.zebrains.team")
+        default=default.get("gitlab", "url", fallback="https://gitlab.zebrains.team" if is_zebrains_user else "")
     ).ask()
 
     # Теперь используем полученный URL для формирования инструкции
