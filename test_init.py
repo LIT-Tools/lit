@@ -41,7 +41,6 @@ class TestInitConfig(unittest.TestCase):
             "testuser",  # User login
             "", # Editor
             "jirauser",  # Jira login
-            "jira@example.com",  # Jira email
             "https://jira.test.com",  # Jira URL
             "30",  # Jira days
             "https://gitlab.test.com",  # GitLab URL
@@ -73,7 +72,6 @@ class TestInitConfig(unittest.TestCase):
         # Проверяем секцию [jira]
         self.assertEqual(config.get("jira", "login"), "jirauser")
         self.assertEqual(config.get("jira", "pass"), "jirapass")
-        self.assertEqual(config.get("jira", "email"), "jira@example.com")
         self.assertEqual(config.get("jira", "url"), "https://jira.test.com")
         self.assertEqual(config.get("jira", "days"), "30")
 
@@ -101,7 +99,6 @@ class TestInitConfig(unittest.TestCase):
         existing_config["jira"] = {
             "login": "oldjira",
             "pass": "oldpass",
-            "email": "oldjira@example.com",
             "url": "https://old.jira",
             "days": "60"
         }
@@ -144,7 +141,6 @@ class TestInitConfig(unittest.TestCase):
             # Пустой ответ для логина - пользователь нажал Enter (принял дефолт)
             "User login:": None,  # Используем None как индикатор принятия дефолта
             "Jira login:": "jirauser",
-            "Jira email:": "jira@example.com",
             "Jira URL:": "https://jira.test.com",
             "Days to sync:": "30",
             "GitLab URL:": "https://gitlab.test.com",

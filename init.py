@@ -67,10 +67,6 @@ def init_config():
 
     config["jira"] = {
         "login": jira_login,
-        "email": questionary.text(
-            "Jira email:",
-            default=default.get("jira", "email", fallback=user_email)
-        ).ask(),
         "pass": jira_pass,
         "url": questionary.text(
             "Jira URL:",
