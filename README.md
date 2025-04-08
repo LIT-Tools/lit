@@ -132,17 +132,15 @@ lit pull [--jira] [--gitlab]
 ```ini
 [user]
 login = user
-email = user@domain.com
+editor = nano # C:\Program Files\Notepad++\notepad++.exe
 
 [jira]
 login = user
-email = user@domain.com
 pass = password
 url = https://jira.com
 days = 30
 
 [gitlab]
-login = user
 email = user@domain.com
 url = https://gitlab.com
 token = ваш_личный_токен
@@ -264,7 +262,9 @@ poetry install --with dev
 
 2. Запустите тесты:
 ```bash
-coverage run -m unittest discover
+coverage run --branch -m unittest discover
+```
+```bash
 coverage report -m
 ```
 
