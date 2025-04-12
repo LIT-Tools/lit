@@ -1,6 +1,9 @@
 # LIT: Logging Integrated Timekeeper
 
-<img src="https://img.shields.io/badge/python-3.9+-blue?logo=python" alt="Python Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/coverage-83%25-green" alt="Coverage">
+[![CRAP](https://img.shields.io/badge/python-3.9+-blue?logo=python)]()
+[![CRAP](https://img.shields.io/badge/license-MIT-2E6F40)]()
+[![CRAP](https://img.shields.io/badge/coverage-83%25-2E6F40)]() 
+[![CRAP](https://img.shields.io/badge/CRAP-8.5-2E6F40)]()
 
 Консольная утилита для удобного управления рабочими логами с интеграцией Jira и GitLab
 
@@ -269,6 +272,11 @@ coverage run --branch -m unittest discover
 ```
 ```bash
 coverage report -m
+```
+```bash
+coverage json -o coverage.json    
+radon cc . -j -O cc.json   
+python calc_crap.py
 ```
 
 3. Откройте отчёт:

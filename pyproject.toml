@@ -19,6 +19,7 @@ dependencies = [
 [tool.poetry.group.dev.dependencies]
 coverage = "^7.6.12"
 pyinstaller = "6.12.0"
+radon = "^6.0.1"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
