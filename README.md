@@ -166,70 +166,41 @@ days = 30
 
 ### 🍏 Mac
 ```bash
-# Установка Poetry (рекомендуется через Homebrew)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install poetry
-
-#  Для управления версиями Python (опционально, но рекомендуется)
-brew install pyenv
-echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
-echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
-echo 'eval "$(pyenv init -)"' >> ~/.zshrc
-source ~/.zshrc
-
-# Установка нужной версии Python (пример для 3.12)
-pyenv install 3.12
-pyenv global 3.12
+# uv (один раз)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env      # zsh/bash; либо просто откройте новый терминал
 
 git clone https://github.com/LIT-Tools/lit.git
 cd lit
+uv sync
 
-poetry install
-source .venv/bin/activate  # Для bash/zsh
+source .venv/bin/activate
+python lit.py --help
 ```
 
 ### 🐧 Linux
 
-1. Установите системные зависимости
+1. Системные зависимости — только `git` и `curl`
+   (Python, pip, venv и компилятор `uv` не требуются — он скачивает готовый CPython)
 ```bash
-# Для Debian/Ubuntu:
-sudo apt-get update && sudo apt-get install -y \
-    python3 python3-pip python3-venv git curl \
-    build-essential libssl-dev zlib1g-dev
+# Debian/Ubuntu:
+sudo apt-get update && sudo apt-get install -y git curl
 
-# Для Fedora/RHEL:
-sudo dnf install -y python3 python3-pip python3-virtualenv git curl \
-    gcc openssl-devel bzip2-devel libffi-devel zlib-devel
+# Fedora/RHEL:
+sudo dnf install -y git curl
 ```
 
-2. Установите Poetry
+2. Установка uv и проекта
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
+curl -LsSf https://astral.sh/uv/install.sh | sh
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
-```
 
-3. Установите pyenv (опционально, для управления версиями Python)
-```bash
-curl https://pyenv.run | bash
-
-# Добавьте в ~/.bashrc:
-echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
-echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-source ~/.bashrc
-
-# Установите нужную версию Python (пример):
-pyenv install 3.12
-pyenv global 3.12
-```
-
-4. Клонируйте репозиторий и установите зависимости
-```bash
 git clone https://github.com/LIT-Tools/lit.git
 cd lit
-poetry install
-poetry shell  # или source .venv/bin/activate
+uv sync
+source .venv/bin/activate
+python lit.py --help
 ```
 
 ### 🪟 Windows
@@ -252,14 +223,14 @@ poetry env activate
 ## 🔨 Сборка
 Windows / Linux / macOS
 ```bash
-poetry run pyinstaller lit.spec
+uv run pyinstaller lit.spec
 ```
 
 ## 🛠 Тестирование
 
 1. Установите dev-зависимости:
 ```bash
-poetry install --with dev
+uv sync
 ```
 
 2. Запустите тесты:
