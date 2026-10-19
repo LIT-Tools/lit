@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-lit = "lit:main"
+lit = "lit:cli"
 
 [dependency-groups]
 dev = [

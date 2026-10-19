@@ -517,5 +517,10 @@ def process_arguments(args=None):
     else:
         main(parser)
 
-if __name__ == '__main__':
+def cli() -> None:
+    """Entry point for the console script (``lit``)."""
     process_arguments()
+
+
+if __name__ == '__main__':
+    cli()
