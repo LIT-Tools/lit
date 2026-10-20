@@ -1,3 +1,20 @@
+## Шаг 1 — вынос путей `.lit` в `constants.py` (2026-10-20)
+
+### Результат
+- `constants.py`: определения `LIT_DIR`, `LIT_STORE`, `LIT_HISTORY`, `CONFIG_FILE`, `COMMITS_FILE`, `TASKS_FILE` + `os.makedirs(LIT_DIR, exist_ok=True)`. Коммит `467f395 refactor(constants): extract shared paths into constants.py`.
+- `lit.py`, `import_jira.py`, `import_gitlab.py`, `push.py`, `init.py`: дублирующиеся определения путей заменены на импорт из `constants.py`.
+
+### Где буксовал
+- (нет)
+
+### Правила для следующих шагов
+- После правки путей — сразу тесты + smoke (`uv run coverage run -m unittest discover && uv run lit --help`).
+- Не менять `load_config()`, `WorklogManager`, формат типов путей.
+- Если тесты упали на тип `LIT_*` — переключиться на одну форму (Path vs str).
+
+### Чего не делать
+- Не запускать интерактивные команды (`uv run lit init`, `push`, `add`), если это не smoke.
+
 ## Шаг 0 — починка упаковки и entry point (2026-10-20)
 
 ### Результат

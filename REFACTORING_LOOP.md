@@ -33,7 +33,7 @@ coverage run -m unittest discover && coverage report -m
 ## 📋 Чек-лист выполнения шагов
 
 - [x] Шаг 0: (prerequisite): Починить упаковку пакета
-- [ ] Шаг 1: Создание модуля констант (`constants.py`)
+- [x] Шаг 1: Создание модуля констант (`constants.py`)
 - [ ] Шаг 2: Централизация конфигурации (`config_manager.py`)
 - [ ] Шаг 3: Выделение бизнес-логики (`core/worklog_manager.py`)
 - [ ] Шаг 4: Структурирование интеграций (`integrations/`)
