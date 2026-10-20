@@ -6,9 +6,8 @@ import os
 import configparser
 
 # TODO Конфигурация дублируется, вынести в отдельный код
-LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
+from constants import LIT_DIR, CONFIG_FILE
 os.makedirs(LIT_DIR, exist_ok=True)
-CONFIG_FILE = os.path.join(LIT_DIR, ".litconfig")
 
 JIRA_URL = ''
 # USER_EMAIL = config.get('jira', 'email')

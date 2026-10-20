@@ -18,13 +18,10 @@ from push import add_worklog, jira_connect
 from utils import sort_key, load_dict, safe_split
 
 #TODO Конфигурация дублируется, вынести в отдельный код
-LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
-os.makedirs(LIT_DIR, exist_ok=True)
-LIT_STORE = os.path.join(LIT_DIR, ".litstore")
-LIT_HISTORY = os.path.join(LIT_DIR, ".lithistory")
-COMMITS_FILE = os.path.join(LIT_DIR, "commits.json")
-TASKS_FILE = os.path.join(LIT_DIR, "tasks.json")
-CONFIG_FILE = os.path.join(LIT_DIR, ".litconfig")
+from constants import (
+    LIT_DIR, LIT_STORE, LIT_HISTORY,
+    CONFIG_FILE, COMMITS_FILE, TASKS_FILE,
+)
 
 COMMITS = load_dict(COMMITS_FILE)
 TASKS = load_dict(TASKS_FILE)

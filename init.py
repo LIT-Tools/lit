@@ -5,10 +5,8 @@ from configparser import ConfigParser
 from pathlib import Path
 
 # TODO Конфигурация дублируется, вынести в отдельный код
-LIT_DIR = os.path.join(os.path.expanduser("~"), ".lit")
+from constants import LIT_DIR, COMMITS_FILE, CONFIG_FILE
 os.makedirs(LIT_DIR, exist_ok=True)
-COMMITS_FILE = os.path.join(LIT_DIR, "commits.json")
-CONFIG_FILE = os.path.join(LIT_DIR, ".litconfig")
 
 # Создаем конфиг-парсер с сохранением регистра
 config = configparser.RawConfigParser()
