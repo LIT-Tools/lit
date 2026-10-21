@@ -4,10 +4,12 @@ import os
 import re
 import subprocess
 from datetime import datetime, timedelta, time as dt_time
-from config_manager import get_user
 from constants import LIT_HISTORY, LIT_STORE
 from parser import pars_store
 from utils import sort_key
+from prompt_toolkit import PromptSession
+
+CUSTOM_EDITOR = ''
 
 class WorklogManager:
     def __init__(self):
@@ -115,7 +117,6 @@ class WorklogManager:
             print("Нет записей для отправки.")
             return
         self.show_status()
-        from prompt_toolkit import PromptSession
         session = PromptSession()
         confirm = session.prompt("\nВы уверены что хотите отправить эти записи? [y/N]: ").strip().lower()
         if confirm == 'y':
@@ -152,12 +153,15 @@ class WorklogManager:
         parser.add_argument('-t', '--time', default=datetime.now().strftime('%H:%M'), help='Время (чч:мм)')
 
     def edit_entries(self):
-        editor = get_user()["editor"]
+        try:
+            from lit import CUSTOM_EDITOR
+        except ImportError:
+            CUSTOM_EDITOR = ''
         if os.name == 'nt':
             default_editor = 'notepad'
         else:
             default_editor = 'vim'
-        editor = editor or os.environ.get('EDITOR') or os.environ.get('VISUAL') or default_editor
+        editor = CUSTOM_EDITOR or os.environ.get('EDITOR') or os.environ.get('VISUAL') or default_editor
         try:
             cmd = [editor, LIT_STORE]
             print(cmd)
