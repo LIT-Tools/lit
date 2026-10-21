@@ -75,7 +75,14 @@ class WorklogManager:
                     hours += num / 60
                 hours_str += f'{value}{unit} '
             opts.hours = hours_str.strip().replace('.', ',')
-            date_obj = datetime.strptime(opts.date, "%d.%m.%Y")
+            try:
+                date_obj = datetime.strptime(opts.date, "%d.%m.%Y")
+            except ValueError:
+                print(
+                    f"⛔ Ошибка: Неверная дата '{opts.date}'. "
+                    f"Ожидается формат дд.мм.гггг (например, 25.12.2023)."
+                )
+                return
             formatted_date = date_obj.strftime("%d.%m.%Y")
             start_time = datetime.strptime(f"{opts.date} {opts.time}", "%d.%m.%Y %H:%M")
             end_time = start_time + timedelta(hours=hours)

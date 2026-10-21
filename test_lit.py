@@ -490,6 +490,22 @@ class TestValidation(unittest.TestCase):
                 )
 
 
+    def test_add_entry_invalid_date(self):
+        manager = WorklogManager()
+        manager.entries = []
+        invalid_dates = ["31.02.2025", "32.01.2025", "abc", "01/01/2025"]
+        for bad_date in invalid_dates:
+            with self.subTest(date=bad_date):
+                manager.entries = []
+                args = {"code":"TASK-123","hours":"4","message":"test","date":bad_date,"time":"10:00"}
+                with patch("lit.TASKS", {"TASK-123":"Test"}), patch("builtins.print") as mock_print, patch.object(manager,"_save") as mock_save:
+                    manager.add_entry(args)
+                output = " ".join(str(c) for c in mock_print.call_args_list)
+                self.assertIn("Неверная дата", output)
+                self.assertIn(bad_date, output)
+                mock_save.assert_not_called()
+                self.assertEqual(manager.entries, [])
+
 class TestPullEntries(unittest.TestCase):
     def setUp(self):
         self.manager = WorklogManager()
