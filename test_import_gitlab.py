@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
-import import_gitlab
+import integrations.gitlab
 import logging
 from datetime import datetime, timedelta, timezone
 import io
@@ -14,19 +14,19 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
         sys.stdout = io.StringIO()
 
         # Инициализация моков
-        self.mock_requests = patch('import_gitlab.requests').start()
-        self.mock_save_commits = patch('import_gitlab.save_commits').start()
-        self.mock_load_config = patch('import_gitlab.load_config').start()
+        self.mock_requests = patch('integrations.gitlab.requests').start()
+        self.mock_save_commits = patch('integrations.gitlab.save_commits').start()
+        self.mock_load_config = patch('integrations.gitlab.load_config').start()
 
         # Установка тестовой конфигурации
-        import_gitlab.GITLAB_URL = 'https://gitlab.example.com'
-        import_gitlab.TOKEN = 'fake_token'
-        import_gitlab.TARGET_USER = 'test_user'
-        import_gitlab.DAYS = 7
+        integrations.gitlab.GITLAB_URL = 'https://gitlab.example.com'
+        integrations.gitlab.TOKEN = 'fake_token'
+        integrations.gitlab.TARGET_USER = 'test_user'
+        integrations.gitlab.DAYS = 7
 
         # Фиксация времени
         self.fixed_time = datetime(2023, 1, 1, 12, 0, tzinfo=timezone.utc)
-        self.datetime_patcher = patch('import_gitlab.datetime')
+        self.datetime_patcher = patch('integrations.gitlab.datetime')
         mock_datetime = self.datetime_patcher.start()
         mock_datetime.now.return_value = self.fixed_time
 
@@ -53,7 +53,7 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
         # Импортируем реальный модуль requests.exceptions
         import requests.exceptions
 
-        # Назначаем модуль исключений моку, чтобы import_gitlab использовал корректные классы исключений
+        # Назначаем модуль исключений моку, чтобы integrations.gitlab использовал корректные классы исключений
         self.mock_requests.exceptions = requests.exceptions
 
         # Создаём необходимые ответы для всех запросов
@@ -72,7 +72,7 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
 
         self.mock_requests.get.side_effect = mock_responses
 
-        import_gitlab.load_commits_from_gitlab()
+        integrations.gitlab.load_commits_from_gitlab()
 
         # Проверка вызовов API
         self.mock_requests.get.assert_any_call(
@@ -116,7 +116,7 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
             self.create_response([])
         ]
 
-        import_gitlab.load_commits_from_gitlab()
+        integrations.gitlab.load_commits_from_gitlab()
 
         self.mock_save_commits.assert_called_once_with({'TEST-456': ['Valid commit']})
 
@@ -126,7 +126,7 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
         import requests
 
         # Оригинальный requests.get
-        original_get = import_gitlab.requests.get
+        original_get = integrations.gitlab.requests.get
 
         # Счетчик вызовов
         call_count = 0
@@ -145,18 +145,18 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
             # Второй вызов - для /api/v4/users/{username}/projects - с ошибкой
             else:
                 # Восстанавливаем оригинальную функцию
-                import_gitlab.requests.get = original_get
+                integrations.gitlab.requests.get = original_get
                 # Сохраняем пустой результат
-                import_gitlab.save_commits({})
+                integrations.gitlab.save_commits({})
                 # Эмулируем обработку ошибки
                 raise requests.exceptions.RequestException("HTTP Error 403")
 
         # Подменяем функцию requests.get нашей функцией
-        import_gitlab.requests.get = patched_get
+        integrations.gitlab.requests.get = patched_get
 
         try:
             # Вызываем функцию
-            import_gitlab.load_commits_from_gitlab()
+            integrations.gitlab.load_commits_from_gitlab()
         except Exception as e:
             # Выводим исключение для диагностики
             print(f"Перехваченное исключение: {e}")
@@ -165,7 +165,7 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
         self.mock_save_commits.assert_called_once_with({})
 
         # Восстанавливаем оригинальную функцию
-        import_gitlab.requests.get = original_get
+        integrations.gitlab.requests.get = original_get
 
     def test_message_parsing(self):
         """Тест парсинга сообщений коммитов"""
@@ -188,7 +188,7 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
             self.create_response([])
         ]
 
-        import_gitlab.load_commits_from_gitlab()
+        integrations.gitlab.load_commits_from_gitlab()
 
         self.mock_save_commits.assert_called_once_with({
             'TEST-001': ['Fix issue'],

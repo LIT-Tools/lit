@@ -33,11 +33,8 @@ build-backend = "hatchling.build"
 only-include = [
     "lit.py",
     "parser.py",
-    "push.py",
     "utils.py",
     "init.py",
-    "import_jira.py",
-    "import_gitlab.py",
     "core/*.py",
     "integrations/*.py",
 ]

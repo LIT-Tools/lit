@@ -36,6 +36,7 @@ coverage run -m unittest discover && coverage report -m
 - [x] Шаг 1: Создание модуля констант (`constants.py`)
 - [x] Шаг 2: Централизация конфигурации (`config_manager.py`)
 - [x] Шаг 3: Выделение бизнес-логики (`core/worklog_manager.py`)
+- [ ] Шаг 4.5: Удаление deprecated-шимов (`import_jira.py`, `import_gitlab.py`, `push.py`)
 - [ ] Шаг 4: Структурирование интеграций (`integrations/`)
 - [ ] Шаг 5: Улучшение валидации дат и защиты от падений
 - [ ] Шаг 6: Добавление аннотаций типов (Type Hints)
