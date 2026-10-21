@@ -195,3 +195,39 @@
   их с `integrations.*`. `sys.modules[__name__] = _m` делает
   `import_jira is integrations.jira`, поэтому `patch` бьёт в одно место.
 - Удаление шимов — в Шаг 4.5 (не в Шаг 6; Шаг 6 — type hints).
+
+## Шаг 4.5 — удаление deprecated-шимов (2026-10-21)
+
+### Результат
+- Удалены `import_jira.py`, `import_gitlab.py`, `push.py`; замены в `test_*.py` на `integrations.jira`, `integrations.gitlab`, `integrations.jira_push`; `pyproject.toml` — убраны из `only-include`. Коммит `14f0065`.
+- 43 тестов OK, 83% покрытие, smoke `exit=0`.
+
+### Где буксовал / сложности
+- `sys.modules`-подмена работала «магически»: `patch("import_jira.requests")` бил в `integrations.jira.requests` до удаления, но после `git rm` — `ModuleNotFoundError`. Пришлось менять **все** упоминания, включая `from push import ...`, `import push`, `patch.object(import_jira, ...)`.
+- В `test_push.py` был только `from push import add_worklog`; в `test_import_gitlab.py` — почти весь файл использовал `import_gitlab` напрямую.
+- `REFACTORING_LOOP.md` случайно попал в коммит (поменялся чекбокс шага 4.5) — нужно следить за `git status` перед коммитом.
+- `uv sync --reinstall-package lit` обязателен после `git rm` + `pyproject.toml`; иначе `.venv/bin/lit` остаётся старым.
+- Production-код (`config_manager.py`, `integrations/gitlab.py`) содержал комментарии `# Для совместимости с тестами, мокающими import_gitlab.load_config()` — это не ошибки, а алиасы, не трогал.
+
+## Шаг 5 — понятная ошибка при невалидной дате (2026-10-21)
+
+### Результат
+- `core/worklog_manager.py`: `add_entry` — `try/except ValueError` вокруг первого `strptime(opts.date, "%d.%m.%Y")`; при ошибке `print(...)` + `return` (без `raise`, чтобы внешний `except Exception` не подхватил повторно); `self.entries.append`/`_save` не выполняются.
+- `test_lit.py`: добавлен `test_add_entry_invalid_date` (subTest по 4 невалидным датам, `patch("lit.TASKS")`, `patch.object(manager,"_save")`, проверка `assertIn("Неверная дата")`, `assertNotCalled` save); 44 теста OK.
+- Коммит `9c7610b`.
+
+### Где буксовал
+- `WorklogManager()` в smoke с `patch` может зависать на загрузке `.litstore` / сетевых вызовах (exit 124/137); проверка через `timeout` + `unittest` надёжнее.
+- Важно: `print + return`, не `raise`, иначе общий `except Exception` перехватывает и печатает второе сырое сообщение.
+- `opts.time` не трогался (вне задачи); внешние `except Exception`, `raise ValueError` для кода/часов оставлены.
+
+### Правила для следующих шагов
+- При валидации дат / времени в `add_entry`: оборачивать конкретный `strptime`, `return` сразу, не `raise`.
+- Тесты с `WorklogManager` — всегда мокать `_save`, `lit.TASKS`, `builtins.print`; использовать `subTest` для набора входных значений; `manager.entries = []` перед каждым `subTest`.
+- `git status` перед коммитом — проверить нет ли лишних `REFACTORING_LOOP.md` / `docs/` (см. шаг 4.5).
+- Не добавлять валидацию в `_configure_add_parser` — задача про runtime-обработку.
+
+### Чего не делать
+- Не трогать общий `except Exception` в `add_entry` — он остаётся fallback'ом.
+- Не изменять поведение для валидных дат (`25.12.2023`, `29.02.2024` и т.п.).
+- Не запускать интерактивные `lit add` / `push` / `init` без `_save`/`TASKS` моков.
