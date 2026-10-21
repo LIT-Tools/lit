@@ -11,9 +11,9 @@ from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
 from init import init_config
 from parser import pars_store
-from import_jira import load_tasks_from_jira
-from import_gitlab import load_commits_from_gitlab
-from push import add_worklog, jira_connect
+from integrations.jira import load_tasks_from_jira
+from integrations.gitlab import load_commits_from_gitlab
+from integrations.jira_push import add_worklog, jira_connect
 from utils import sort_key, load_dict, safe_split
 from core.worklog_manager import WorklogManager
 
