@@ -78,3 +78,106 @@
 - Не создавать новые директории (`core/`, `integrations/`), если в ТЗ этого нет явно.
 - Не менять формат путей в `constants.py` (это уже готово).
 - Не добавлять type hints сейчас — это следующий этап.
+
+## Шаг 3 — вынос `WorklogManager` в `core/worklog_manager.py` (2026-10-21)
+
+### Результат
+- Создан пакет `core/`: `core/__init__.py` (пустой) + `core/worklog_manager.py` (199 строк).
+  Класс `WorklogManager` вместе со `@staticmethod _configure_add_parser` перенесён **дословно**.
+- `lit.py` похудел на 266 строк: `class WorklogManager` удалён, добавлен re-export
+  `from core.worklog_manager import WorklogManager` (`lit.py:18`) — чтобы `main()`,
+  `process_arguments()` и `create_argument_parser()` продолжали находить класс через
+  глобальный lookup модуля `lit`, а тесты — через `lit.WorklogManager`.
+- В `lit.py` остались: `WorklogCompleter`, `main`, `cli`, `create_argument_parser`,
+  `process_arguments`, `get_version`, алиас `load_config()`, глобалы `COMMITS`/`TASKS`/`CUSTOM_EDITOR`.
+- Коммит `3c00846 refactor(core): move WorklogManager to core/worklog_manager.py`.
+
+### Таблица мок-совместимости (главное правило шага)
+Тесты мокают через `lit.<имя>`, поэтому **потребитель в `core/worklog_manager.py`
+должен импортировать имя лениво, внутри метода**:
+
+| Имя | Где мокают | Стратегия в `core/worklog_manager.py` |
+|-----|-----------|-------------------------------------|
+| `TASKS` | `lit.TASKS` | lazy `from lit import TASKS` в `add_entry` |
+| `add_worklog` | `lit.add_worklog` | lazy `from lit import add_worklog, jira_connect` в `push_entries` |
+| `jira_connect` | `lit.jira_connect` | там же |
+| `load_tasks_from_jira` | `lit.load_tasks_from_jira` | lazy `from lit import load_tasks_from_jira, load_commits_from_gitlab` в `pull_entries` |
+| `load_commits_from_gitlab` | `lit.load_commits_from_gitlab` | там же |
+| `init_config` | `lit.init_config` | lazy `from lit import init_config` в методе `init_config` |
+| `pars_store` | не мокают | top-level `from parser import pars_store` — ОК |
+| `sort_key` | не мокают | top-level `from utils import sort_key` — ОК |
+
+Топ-левел `from push import jira_connect` в `core/worklog_manager.py` **сломал бы** `patch("lit.jira_connect")`:
+мок патчится в модуле `lit`, а потребитель смотрит в `push`. Только deferred-импорт
+(`from lit import jira_connect` внутри метода) связывает потребителя с `lit`.
+
+### Точечные правки при переносе (2 шт.)
+1. `edit_entries`: вместо `load_config()` + глобальной `CUSTOM_EDITOR` — `get_user()["editor"]`
+   из `config_manager` (deferred-импорт не нужен, `config_manager` не мокается).
+2. `add_entry`: `TASKS` остался в `lit.py` → `from lit import TASKS` внутри метода
+   (иначе циклический импорт `lit → core.worklog_manager → lit.TASKS`).
+
+### Где буксовал
+- **Циклический импорт**: `lit.py` делает `from core.worklog_manager import WorklogManager` на
+  верхнем уровне, а `core/worklog_manager.py` не может делать `from lit import ...` на верхнем
+  уровне — только внутри методов. Проверка: `uv run python -c "import lit"` и
+  `uv run python -c "import core.worklog_manager"` → оба `ok`.
+- **Re-export ≠ дублирование**: в `lit.py` остаётся строка
+  `from core.worklog_manager import WorklogManager` — это единственный способ сохранить
+  `lit.WorklogManager` для тестов и `create_argument_parser()`.
+- **`PromptSession` в `push_entries`**: в `lit.py` он импортирован сверху, в новом модуле
+  пришлось импортировать локально (`from prompt_toolkit import PromptSession` в методе) —
+  тест мокает `lit.PromptSession`, а не `prompt_toolkit.PromptSession`.
+- **Потеря коммитов из-за `git reset`**: во время работы ветка `feature/refactoring` была
+  сброшена к `6e7e7ed` (`git reset --hard`), и 7 коммитов (шаги 0–2) пропали из `git log`,
+  хотя физически остались в reflog и в `.git/objects`. Восстановлено так:
+  ```bash
+  git stash push -m "step 3 changes"   # сохранить текущую работу
+  git reset --hard 096b2a2            # вернуть tip утраченной цепочки (из reflog)
+  git stash pop                        # наложить изменения поверх
+  ```
+  После `git reset --hard` **нельзя** делать `git clean -fd` — новые (untracked) файлы
+  текущего шага (`core/`) удаляются безвозвратно и в стеш не попадают
+  (`git stash` без `-u` не трогает untracked). Это стоило одного потерянного
+  `core/worklog_manager.py`, который пришлось пересоздавать вручную.
+- **Дата-баги в тестах (НЕ связаны с шагом 3)**: 5 тестов падают и на чистом `096b2a2`
+  без каких-либо правок этого шага — тесты ждут фиксированную дату `15.01.2023`,
+  а код берёт `datetime.now()` (получается `21.10.2026`):
+  `test_unix_editor_from_env`, `test_windows_default_editor`, `test_push_command`,
+  `test_push_command_cancel`, `test_two_entries_success`.
+  Плюс расхождение путей: тесты ждут `/fake/path/.litstore`, код берёт `~/.lit/.litstore`.
+  Требует отдельного решения (править тесты или дефолтную дату) — на шаге 3 не чинили.
+- **Smoke `uv run lit --help` падает**: `TypeError: main() missing 1 required positional
+  argument: 'parser'`. Entry point в `pyproject.toml` — `lit = "lit:main"`, а `main(parser)` —
+  это REPL; настоящая точка входа — `process_arguments()`/`cli()`. Коммит `72dc7c4`
+  «fix(cli): add entry-point wrapper...» должен был это починить — но после сброса ветки
+  его часть потерялась. Требует проверки перед следующим шагом.
+
+### Правила для следующих шагов
+- Перед любыми правками: `git status` должен быть чистым. Если в `git log` нет коммитов
+  предыдущих шагов — смотреть `git reflog --all`, а не паниковать: коммиты там есть.
+- **`git clean -fd` опасен** во время рефакторинга — сносит untracked-файлы текущего шага
+  (`core/`), которые нигде не закоммичены. Если нужно — `git clean -fdn` (dry-run) сначала.
+- `git stash push -u` вместо `git stash push`, если в работе есть новые файлы.
+- Мок-совместимость проверять грепом ДО переноса, а не после:
+  ```bash
+  grep -rn "patch(\"lit\.\|patch('lit\." --include="test_*.py" .
+  ```
+  Каждое найденное `lit.<X>` → потребитель `X` обязан брать `X` через
+  `from lit import X` внутри метода.
+- `core/worklog_manager.py` импортирует `config_manager`/`constants`/`parser`/`utils`
+  как **top-level** (они плоские модули в корне, `from config_manager import get_user`).
+- Новые пакеты (`core/`) надо включать в сборку wheel — в `pyproject.toml` есть
+  `[tool.hatch.build.targets.wheel] only-include` со списком плоских модулей
+  (см. шаг 0); проверить, что `core/` туда попал, иначе пакет не уедет в дистрибутив.
+
+### Чего не делать
+- Не переносить `WorklogCompleter`, `main`, `process_arguments`, `cli`,
+  `create_argument_parser`, `get_version`, алиас `load_config`, глобалы
+  `COMMITS`/`TASKS`/`CUSTOM_EDITOR` — они остаются в `lit.py`.
+- Не трогать `test_*.py` — при сломанном моке правится потребитель (lazy-импорт),
+  а не тест.
+- Не добавлять type hints на этом этапе (это отдельный шаг).
+- Не создавать `integrations/`, `src/`, `services/` — только `core/`.
+- Не запускать `uv run lit` без аргументов, а также `init`/`push`/`add`/`edit` —
+  это интерактив или запись на диск.
