@@ -152,6 +152,21 @@ coverage run -m unittest discover && coverage report -m
 
 ---
 
+### Шаг 4.5: Удаление deprecated-шимов (`import_jira.py`, `import_gitlab.py`, `push.py`)
+- **Цель**: убрать `sys.modules`-подмену, перевести тесты на `integrations.*`.
+- **Инструкция**:
+  1. В `test_*.py` заменить `patch("import_jira.X")` → `patch("integrations.jira.X")`,
+     `patch("import_gitlab.X")` → `patch("integrations.gitlab.X")`,
+     `patch("push.X")` → `patch("integrations.jira_push.X")`. `patch("lit.X")`
+     не трогать (работает через re-export в `lit.py`).
+  2. `git rm import_jira.py import_gitlab.py push.py`.
+  3. Убрать эти имена из `pyproject.toml` → `only-include`.
+- **Проверка**: `uv run coverage run -m unittest discover && uv run coverage report -m`
+  → 43 OK, ≥82%.
+- **Коммит**: `test(integrations): use integrations.* namespace, drop shims`
+
+---
+
 ### Шаг 5: Улучшение валидации дат и защиты от падений
 - **Цель**: Обрабатывать невалидные даты (например, 31 февраля) понятным
   сообщением вместо падения с `ValueError`.

@@ -181,3 +181,17 @@
 - Не создавать `integrations/`, `src/`, `services/` — только `core/`.
 - Не запускать `uv run lit` без аргументов, а также `init`/`push`/`add`/`edit` —
   это интерактив или запись на диск.
+
+## Шаг 4 — integrations/ (выполнено)
+- Структура: fallback 1-к-1 (jira.py, jira_push.py, gitlab.py)
+- Старые файлы: shims через sys.modules (patch-совместимость)
+- lit.py: ре-экспорт из integrations.*; core/worklog_manager.py не трогался
+- Тесты: 43 OK, smoke exit=0, моки ok, покрытие 83%
+- pyproject.toml: добавлены core/*.py, integrations/*.py в only-include
+- Коммит: 6ca9782
+- Шимы (`import_jira.py`, `import_gitlab.py`, `push.py`) — `sys.modules`-
+  подмена: тесты мокают `patch("import_jira.requests")` /
+  `from push import add_worklog`, и обычный `from X import *` не связывает
+  их с `integrations.*`. `sys.modules[__name__] = _m` делает
+  `import_jira is integrations.jira`, поэтому `patch` бьёт в одно место.
+- Удаление шимов — в Шаг 4.5 (не в Шаг 6; Шаг 6 — type hints).
