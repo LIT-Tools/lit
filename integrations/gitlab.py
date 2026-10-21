@@ -1,4 +1,6 @@
 """Загрузка коммитов из GitLab."""
+from __future__ import annotations
+
 import requests
 from datetime import datetime, timedelta
 import re
@@ -19,7 +21,7 @@ def save_commits(data: dict):
         print(f"Error saving commits: {str(e)}")
 
 
-def load_commits_from_gitlab():
+def load_commits_from_gitlab() -> None:
     """Загрузка коммитов из GitLab."""
     load_config()
     
@@ -151,7 +153,7 @@ def load_commits_from_gitlab():
 
 
 # Для совместимости с тестами мокающими import_gitlab.load_config()
-def load_config(path=None):
+def load_config(path: str | None = None) -> dict:
     """Алиас для совместимости с мокающими тестами."""
     config = get_gitlab()
     global GITLAB_URL, TOKEN, TARGET_USER, DAYS

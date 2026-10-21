@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from jira import JIRA, exceptions
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
@@ -18,7 +20,7 @@ from constants import LIT_DIR, TASKS_FILE
 os.makedirs(LIT_DIR, exist_ok=True)
 
 
-def pars_error_jira(e):
+def pars_error_jira(e: Exception) -> None:
     soup = BeautifulSoup(e.text, 'html.parser')
     error_div = soup.find('div', class_='aui-message-warning')
 
@@ -36,7 +38,7 @@ def pars_error_jira(e):
         print(f"HTTP ошибка {e.status_code}: {e.text}")
 
 
-def load_tasks_from_jira():
+def load_tasks_from_jira() -> None:
     config = get_jira()
     AUTH = (config["login"], config["pass"])
     url = config["url"]
@@ -78,7 +80,7 @@ def load_tasks_from_jira():
     jql_assignee = f'assignee = "{TARGET_USER}" AND updated >= "{start_date}"'
     jql_worklog = f'worklogAuthor = "{TARGET_USER}" AND worklogDate >= "{start_date}"'
 
-    def get_all_issues(jql_query):
+    def get_all_issues(jql_query: str) -> list:
         """Получаем все задачи по JQL-запросу с пагинацией"""
         issues = []
         start_at = 0

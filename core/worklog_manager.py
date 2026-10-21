@@ -1,4 +1,6 @@
 """Бизнес-логика управления ворклогами."""
+from __future__ import annotations
+
 import argparse
 import os
 import re
@@ -12,12 +14,12 @@ from prompt_toolkit import PromptSession
 CUSTOM_EDITOR = ''
 
 class WorklogManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self.entries = []
         self.history = []
         self._load()
 
-    def _load(self):
+    def _load(self) -> None:
         if os.path.exists(LIT_STORE):
             try:
                 with open(LIT_STORE, 'r', encoding='utf-8') as f:
@@ -25,21 +27,21 @@ class WorklogManager:
             except Exception as e:
                 print(f"Ошибка при загрузке: {e}")
 
-    def _save(self):
+    def _save(self) -> None:
         try:
             with open(LIT_STORE, 'w', encoding='utf-8') as f:
                 f.write("\n".join(self.entries) + "\n")
         except Exception as e:
             print(f"Ошибка при сохранении: {e}")
 
-    def _history(self):
+    def _history(self) -> None:
         try:
             with open(LIT_HISTORY, 'a', encoding='utf-8') as f:
                 f.write("\n".join(self.history) + "\n")
         except Exception as e:
             print(f"Ошибка при сохранении: {e}")
 
-    def add_entry(self, args):
+    def add_entry(self, args: dict[str, str] | list[str]) -> None:
         from lit import TASKS
         if isinstance(args, dict):
             opts = argparse.Namespace(**args)
@@ -93,7 +95,7 @@ class WorklogManager:
         except Exception as e:
             print(f"⛔ Ошибка: {str(e)}")
 
-    def show_status(self):
+    def show_status(self) -> None:
         if not self.entries:
             print("Нет подготовленных записей.")
             return
@@ -118,7 +120,7 @@ class WorklogManager:
                     current_date = date_part
                 print(f"  {entry['log'].split(date_part)[1].strip('\n')}")
 
-    def push_entries(self):
+    def push_entries(self) -> None:
         from lit import add_worklog, jira_connect
         if not self.entries:
             print("Нет записей для отправки.")
@@ -152,14 +154,14 @@ class WorklogManager:
             print("Отмена отправки.")
 
     @staticmethod
-    def _configure_add_parser(parser):
+    def _configure_add_parser(parser: argparse.ArgumentParser) -> None:
         parser.add_argument('code', help='Код задачи (например, TASK-123)')
         parser.add_argument('hours', help='Количество часов или минут (например, 15m)')
         parser.add_argument('message', help='Сообщение')
         parser.add_argument('-d', '--date', default=datetime.now().strftime('%d.%m.%Y'), help='Дата (дд.мм.гггг)')
         parser.add_argument('-t', '--time', default=datetime.now().strftime('%H:%M'), help='Время (чч:мм)')
 
-    def edit_entries(self):
+    def edit_entries(self) -> None:
         try:
             from lit import CUSTOM_EDITOR
         except ImportError:
@@ -182,7 +184,7 @@ class WorklogManager:
         except Exception as e:
             print(f"⚠ Ошибка: {str(e)}")
 
-    def pull_entries(self, args=None, jira=None, gitlab=None):
+    def pull_entries(self, args: list[str] | None = None, jira: bool | None = None, gitlab: bool | None = None) -> None:
         from lit import load_commits_from_gitlab, load_tasks_from_jira
         if jira is not None or gitlab is not None:
             load_jira = jira
@@ -205,6 +207,6 @@ class WorklogManager:
         if load_gitlab:
             load_commits_from_gitlab()
 
-    def init_config(self):
+    def init_config(self) -> None:
         from lit import init_config
         init_config()

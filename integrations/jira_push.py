@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from jira import JIRA
 from jira.exceptions import JIRAError
 from datetime import datetime
@@ -9,7 +11,7 @@ from constants import LIT_DIR
 os.makedirs(LIT_DIR, exist_ok=True)
 
 
-def jira_connect():
+def jira_connect() -> JIRA:
     config = get_jira()
     AUTH = (config["login"], config["pass"])
     url = config["url"]
@@ -41,7 +43,7 @@ def jira_connect():
 
     return jira
 
-def add_worklog(jira, issue, time_spent, comment, day, time):
+def add_worklog(jira: JIRA, issue: str, time_spent: str, comment: str, day: str, time: str) -> tuple[str | None, str | None]:
 
     start_time = datetime.strptime(f"{day} {time}", "%d.%m.%Y %H:%M").replace(tzinfo=get_localzone())
     try:
