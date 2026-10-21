@@ -231,3 +231,25 @@
 - Не трогать общий `except Exception` в `add_entry` — он остаётся fallback'ом.
 - Не изменять поведение для валидных дат (`25.12.2023`, `29.02.2024` и т.п.).
 - Не запускать интерактивные `lit add` / `push` / `init` без `_save`/`TASKS` моков.
+
+## Шаг 6 — type hints в core/ и integrations/ (2026-10-21)
+
+### Результат
+- `from __future__ import annotations` добавлен в `core/worklog_manager.py`, `integrations/jira.py`, `integrations/jira_push.py`, `integrations/gitlab.py` — первой исполняемой строкой (после docstring, до остальных `import`).
+- Аннотации аргументов и возвращаемых значений — во всех `def` и методах классов. Современный стиль: `X | None`, `list[str]`, `dict[str, str]`; `Optional`/`Union` не используются.
+- Логика, тела функций, имена, дефолты и lazy-импорты (`from lit import TASKS`, `from lit import add_worklog, jira_connect`) не тронуты.
+- Коммит `12fef9c` (`refactor(types): add type hints across core and integrations`) — ровно 4 файла. 44 теста OK, smoke `exit=0`.
+
+### Правила для следующих шагов
+- `from __future__ import annotations` — **первая** исполняемая строка файла (после docstring и shebang/coding-комментариев), строго до `import argparse` и т.п. Иначе `SyntaxError: from __future__ imports must occur at the beginning of the file`.
+- PEP 604 (`int | None`) в runtime работает только на 3.10+; проект требует `>=3.9` — поэтому `__future__`-импорт обязателен в каждом файле с `|`-аннотациями.
+- Перед аннотациями проверить, не смотрят ли тесты в `__annotations__`/`get_type_hints`/`signature()`: `__future__` превращает аннотации в строки. Проверено грепом — таких тестов нет.
+- Тип, нужный только для аннотации, импортировать под `if TYPE_CHECKING:` — runtime-импорт ради аннотации не нужен. В этом шаге не потребовалось: `JIRA` и `argparse` уже импортированы.
+- `add_worklog` возвращает `(id, err)` → `tuple[str | None, str | None]`; `jira_connect` возвращает клиент `JIRA` (на любой ошибке — `exit()`, а не `None`).
+- `add_entry(self, args)` принимает либо `dict` (из JSON-конфига), либо `list[str]` (argv) → `dict[str, str] | list[str]`.
+
+### Чего не делать
+- Не аннотировать локальные переменные внутри методов (например, `hours: float = 0.0`) — задача только про сигнатуры.
+- Не менять дефолты (`= None`, `= ''`), не переименовывать аргументы/функции/классы.
+- Не трогать `lit.py`, `config_manager.py`, `constants.py`, `init.py`, `parser.py`, `utils.py`, `test_*.py` — они вне scope этого шага.
+- Не добавлять `# type: ignore`, `cast(...)`, `Any` без нужды.

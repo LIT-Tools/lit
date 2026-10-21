@@ -39,7 +39,7 @@ coverage run -m unittest discover && coverage report -m
 - [x] Шаг 4: Структурирование интеграций (`integrations/`)
 - [x] Шаг 4.5: Удаление deprecated-шимов (`import_jira.py`, `import_gitlab.py`, `push.py`)
 - [x] Шаг 5: Улучшение валидации дат и защиты от падений
-- [ ] Шаг 6: Добавление аннотаций типов (Type Hints)
+- [x] Шаг 6: Добавление аннотаций типов (Type Hints)
 
 ---
 
