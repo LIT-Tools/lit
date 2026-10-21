@@ -235,8 +235,8 @@ uv sync
 
 2. Запустите тесты:
 ```bash
-coverage run -m unittest discover
-coverage report -m
+uv run coverage run -m unittest discover
+uv run coverage report -m
 ```
 
 3. Откройте отчёт:
