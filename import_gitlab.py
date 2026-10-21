@@ -1,11 +1,15 @@
+"""Загрузка коммитов из GitLab."""
 import requests
 from datetime import datetime, timedelta
 import re
 import os
 import json
-import configparser
+from config_manager import get_gitlab
+from constants import LIT_DIR, COMMITS_FILE
 
-#TODO В утилсы
+os.makedirs(LIT_DIR, exist_ok=True)
+
+
 def save_commits(data: dict):
     """Сохранение коммитов в файл с атомарной записью"""
     try:
@@ -15,56 +19,41 @@ def save_commits(data: dict):
         print(f"Error saving commits: {str(e)}")
 
 
-#TODO Конфигурация дублируется, вынести в отдельный код
-from constants import LIT_DIR, COMMITS_FILE, CONFIG_FILE
-os.makedirs(LIT_DIR, exist_ok=True)
-
-GITLAB_URL = ''
-# USER_EMAIL = config.get('jira', 'email')
-TOKEN = ''
-TARGET_USER = ''
-DAYS = ''
-
-def load_config():
-    global GITLAB_URL, TOKEN, TARGET_USER, DAYS
-    # Создаем конфиг-парсер с сохранением регистра
-    config = configparser.RawConfigParser()
-    config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
-    config.read(CONFIG_FILE)
-
-    GITLAB_URL = config.get('gitlab', 'url')
-    TOKEN = config.get('gitlab', 'token')
-    TARGET_USER = config.get('gitlab', 'login')
-    DAYS = int(config.get('gitlab', 'days'))
-
 def load_commits_from_gitlab():
+    """Загрузка коммитов из GitLab."""
     load_config()
+    
+    config = get_gitlab()
     if not TOKEN or TOKEN == '':
-        print("ОШИБКА: Токен GITLAB_TOKEN не найден в .litconfig")
-        return
+        raise Exception("ОШИБКА: Токен GITLAB_TOKEN не найден в .litconfig")
 
     headers = {'Private-Token': TOKEN}
-
+    url = GITLAB_URL
+    target_user = TARGET_USER
+    days = DAYS
+    
     # Получаем информацию о текущем пользователе
-    response = requests.get(f'{GITLAB_URL}/api/v4/user', headers=headers)
+    response = requests.get(f'{url}/api/v4/user', headers=headers)
     response.raise_for_status()
     user = response.json()
     username = user['username']
-    #TODO добавить логику в случае пустого конфига gitlab login
-    username = TARGET_USER
+    
+    # Используем login из конфига, если он указан
+    if target_user:
+        username = target_user
 
     # Рассчитываем дату DAYS дней назад
-    since_datetime = datetime.now() - timedelta(days=DAYS)
+    since_datetime = datetime.now() - timedelta(days=days)
     since_date_iso = since_datetime.isoformat()
 
-    print(f'Поиск проектов за {DAYS} дней...', end="", flush=True)
+    print(f'Поиск проектов за {days} дней...', end="", flush=True)
 
     # Получаем все проекты пользователя
     projects = []
     page = 1
     while True:
         response = requests.get(
-            f'{GITLAB_URL}/api/v4/projects',
+            f'{url}/api/v4/projects',
             headers=headers,
             params={'page': page,
                     'per_page': 100,
@@ -84,27 +73,27 @@ def load_commits_from_gitlab():
 
             try:
                 projects.append(project)
-                print(f'\rПоиск проектов за {DAYS} дней... {len(projects)}', end="", flush=True)
+                print(f'\rПоиск проектов за {days} дней... {len(projects)}', end="", flush=True)
 
             except (KeyError, TypeError, ValueError) as e:
                 print(f"\nОшибка обработки проекта {project.get('id')}: {str(e)}\n")
 
         page += 1
 
-    print(f'\rПоиск коммитов за {DAYS} дней...', end="", flush=True)
+    print(f'\rПоиск коммитов за {days} дней...', end="", flush=True)
 
     # Собираем коммиты из всех проектов
     comments = []
     for index, project in enumerate(projects, 1):
         # Выводим прогресс обработки
-        print(f'\rПоиск коммитов за {DAYS} дней... {index}/{len(projects)}', end='', flush=True)
+        print(f'\rПоиск коммитов за {days} дней... {index}/{len(projects)}', end='', flush=True)
 
         project_id = project['id']
         page = 1
         while True:
             try:
                 response = requests.get(
-                    f'{GITLAB_URL}/api/v4/projects/{project_id}/repository/commits',
+                    f'{url}/api/v4/projects/{project_id}/repository/commits',
                     headers=headers,
                     params={
                         'since': since_date_iso,
@@ -159,3 +148,15 @@ def load_commits_from_gitlab():
     print(f'\rНайдено {useful_commits} пригодных коммитов из {len(comments)} в {len(sorted_tasks)} репозиториях за авторством {username}')
 
     save_commits(sorted_tasks)
+
+
+# Для совместимости с тестами мокающими import_gitlab.load_config()
+def load_config(path=None):
+    """Алиас для совместимости с мокающими тестами."""
+    config = get_gitlab()
+    global GITLAB_URL, TOKEN, TARGET_USER, DAYS
+    GITLAB_URL = config["url"]
+    TOKEN = config["token"]
+    TARGET_USER = config["login"]
+    DAYS = config["days"]
+    return config

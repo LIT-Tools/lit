@@ -3,41 +3,25 @@ from jira.exceptions import JIRAError
 from datetime import datetime
 from tzlocal import get_localzone
 import os
-import configparser
+from config_manager import get_jira
+from constants import LIT_DIR
 
-# TODO Конфигурация дублируется, вынести в отдельный код
-from constants import LIT_DIR, CONFIG_FILE
 os.makedirs(LIT_DIR, exist_ok=True)
 
-JIRA_URL = ''
-# USER_EMAIL = config.get('jira', 'email')
-PASS = ''
-TARGET_USER = ''
-DAYS = ''
 
-def load_config():
-    global JIRA_URL, PASS, TARGET_USER, DAYS
-    # Создаем конфиг-парсер с сохранением регистра
-    config = configparser.RawConfigParser()
-    config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
-    config.read(CONFIG_FILE)
-
-    JIRA_URL = config.get('jira', 'url')
-    PASS = config.get('jira', 'pass')
-    TARGET_USER = config.get('jira', 'login')
-    DAYS = int(config.get('jira', 'days'))
-
-# TODO вынести в отдельный конектор
 def jira_connect():
-    load_config()
-    AUTH = (TARGET_USER, PASS)
+    config = get_jira()
+    AUTH = (config["login"], config["pass"])
+    url = config["url"]
+    days = config["days"]
+    
     # Создаем клиент Jira с базовой аутентификацией
     try:
         jira = JIRA(
-            server=JIRA_URL,
+            server=url,
             basic_auth=AUTH,
             options={
-                'server': JIRA_URL,
+                'server': url,
                 'rest_api_version': '2',  # Явно указываем версию API
                 'verify': True
             },

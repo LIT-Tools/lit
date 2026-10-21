@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import os
 import json
-import configparser
+from config_manager import get_jira
 
 #TODO В утилсы
 def save_commits(data: dict):
@@ -14,29 +14,10 @@ def save_commits(data: dict):
     except Exception as e:
         print(f"Error saving commits: {str(e)}")
 
-#TODO Конфигурация дублируется, вынести в отдельный код
-from constants import LIT_DIR, TASKS_FILE, CONFIG_FILE
+from constants import LIT_DIR, TASKS_FILE
 os.makedirs(LIT_DIR, exist_ok=True)
 
-JIRA_URL = ''
-# USER_EMAIL = config.get('jira', 'email')
-PASS = ''
-TARGET_USER = ''
-DAYS = ''
 
-def load_config():
-    global JIRA_URL, PASS, TARGET_USER, DAYS
-    # Создаем конфиг-парсер с сохранением регистра
-    config = configparser.RawConfigParser()
-    config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
-    config.read(CONFIG_FILE)
-
-    JIRA_URL = config.get('jira', 'url')
-    PASS = config.get('jira', 'pass')
-    TARGET_USER = config.get('jira', 'login')
-    DAYS = int(config.get('jira', 'days'))
-
-#TODO вынести в отдельный конектор или утилсы
 def pars_error_jira(e):
     soup = BeautifulSoup(e.text, 'html.parser')
     error_div = soup.find('div', class_='aui-message-warning')
@@ -56,16 +37,18 @@ def pars_error_jira(e):
 
 
 def load_tasks_from_jira():
-    load_config()
+    config = get_jira()
+    AUTH = (config["login"], config["pass"])
+    url = config["url"]
+    days = config["days"]
+    
     #TODO вынести в отдельный конектор
-    AUTH = (TARGET_USER, PASS)
-    # Создаем клиент Jira с базовой аутентификацией
     try:
         jira = JIRA(
-            server=JIRA_URL,
+            server=url,
             basic_auth=AUTH,
             options={
-                'server': JIRA_URL,
+                'server': url,
                 'rest_api_version': '2',  # Явно указываем версию API
                 'verify': True
             },
@@ -85,7 +68,7 @@ def load_tasks_from_jira():
 
     # Рассчитываем даты за прошлый месяц
     today = datetime.today()
-    first_day_previous_month = today - timedelta(days=DAYS)
+    first_day_previous_month = today - timedelta(days=days)
 
     date_format = '%Y-%m-%d'
     start_date = first_day_previous_month.strftime(date_format)

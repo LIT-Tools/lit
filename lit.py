@@ -1,4 +1,3 @@
-import configparser
 import os
 import argparse
 import shlex
@@ -17,7 +16,7 @@ from import_gitlab import load_commits_from_gitlab
 from push import add_worklog, jira_connect
 from utils import sort_key, load_dict, safe_split
 
-#TODO Конфигурация дублируется, вынести в отдельный код
+from config_manager import get_user
 from constants import (
     LIT_DIR, LIT_STORE, LIT_HISTORY,
     CONFIG_FILE, COMMITS_FILE, TASKS_FILE,
@@ -27,14 +26,12 @@ COMMITS = load_dict(COMMITS_FILE)
 TASKS = load_dict(TASKS_FILE)
 CUSTOM_EDITOR = ''
 
-def load_config():
-    global GITLAB_URL, CUSTOM_EDITOR
-    # Создаем конфиг-парсер с сохранением регистра
-    config = configparser.RawConfigParser()
-    config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
-    config.read(CONFIG_FILE)
-
-    CUSTOM_EDITOR = config.get('user', 'editor', fallback='')
+def load_config(path=None):
+    """Алиас для совместимости."""
+    global CUSTOM_EDITOR
+    user = get_user()
+    CUSTOM_EDITOR = user["editor"]
+    return user
 
 class WorklogCompleter(Completer):
     def get_completions(self, document, complete_event):

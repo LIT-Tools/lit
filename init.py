@@ -3,15 +3,9 @@ import os
 import questionary
 from configparser import ConfigParser
 from pathlib import Path
-
-# TODO Конфигурация дублируется, вынести в отдельный код
 from constants import LIT_DIR, COMMITS_FILE, CONFIG_FILE
-os.makedirs(LIT_DIR, exist_ok=True)
 
-# Создаем конфиг-парсер с сохранением регистра
-config = configparser.RawConfigParser()
-config.optionxform = lambda option: option  # Отключаем авто-преобразование в lowercase
-config.read(CONFIG_FILE)
+os.makedirs(LIT_DIR, exist_ok=True)
 
 
 def init_config():
