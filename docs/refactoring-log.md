@@ -132,4 +132,9 @@
 - Дерево чистое, изменений в коде нет.
 
 ### Уроки (дополняется по шагам)
-- <пусто>
+- `tests/test_import_gitlab.py`: `import X as Y.Z` — ошибка синтаксиса (`dot` в alias запрещён). Правильно `import lit.integrations.gitlab`; patch-цели тоже требуют полного пути (`lit.integrations.gitlab.requests`).
+- `core/worklog_manager.py`: плоские импорты (`from constants import ...`) тоже нужно менять на `lit.constants` — не только `__init__.py`.
+- `.venv` с битым симлинком → `rm -rf .venv && uv sync` (см. `AGENTS.md` и прошлый лог); после `git mv` и изменения `pyproject.toml` обязательны `uv sync --reinstall-package lit`.
+- `patch('core.worklog_manager.datetime')` → `patch('lit.core.worklog_manager.datetime')`; при миграции патчи требуют абсолютного пути к модулю, иначе `ModuleNotFoundError: No module named 'core'`.
+- `pyproject.toml`: `only-include` → `packages = ["src/lit"]`; `source = ["lit"]` в `[tool.coverage.run]` после переезда.
+- `tests/test_init.py`: `import init` + `importlib.reload(init)` → `from lit import init`; патчи `init.questionary` → `lit.init.questionary`.
