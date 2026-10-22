@@ -1,124 +1,65 @@
-# Сырой план на рефакторинг
+# Рефакторинг: текущее состояние и план
 
-### Итоговая целевая структура проекта:
+## Следующий шаг: переезд на `src/lit/`
+
+Цель — классический питонячий layout: пакет в `src/lit/`, тесты в
+`tests/`, `pyproject.toml` управляет сборкой. Без дробления `cli.py`
+на `cli/commands/*`, без новых абстракций.
 
 ```
-lit/
-├── src/
-│   ├── lit/                       # Основной пакет
-│   │   ├── __init__.py
-│   │   │
-│   │   ├── cli/                   # Логика CLI
-│   │   │   ├── __init__.py
-│   │   │   ├── parser.py          # Главный парсер команд (бывший lit.py)
-│   │   │   └── commands/          # Реализации команд
-│   │   │       ├── __init__.py
-│   │   │       ├── add.py
-│   │   │       ├── push.py
-│   │   │       ├── pull.py
-│   │   │       ├── init.py
-│   │   │       └── profile.py     # Управление профилями (MULTI-PROFILE.md)
-│   │   │
-│   │   ├── core/                  # Бизнес-логика
-│   │   │   ├── __init__.py
-│   │   │   ├── models.py          # Data-классы (WorklogEntry)
-│   │   │   ├── worklog_manager.py # Логика работы с ворклогами
-│   │   │   └── parsing/
-│   │   │       ├── __init__.py
-│   │   │       └── lit_store_parser.py  # Парсер .litstore (бывший parser.py)
-│   │   │
-│   │   ├── integrations/          # Интеграции с внешними системами
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py            # Базовый класс интеграций
-│   │   │   ├── jira.py            # Jira-интеграция (бывший push.py + import_jira.py)
-│   │   │   └── gitlab.py          # GitLab-интеграция (бывший import_gitlab.py)
-│   │   │
-│   │   ├── storage/               # Работа с хранилищами
-│   │   │   ├── __init__.py
-│   │   │   ├── config_manager.py  # Управление конфигами
-│   │   │   ├── file_storage.py    # Работа с файлами (.litstore, .lithistory)
-│   │   │   ├── profile_manager.py # Управление профилями
-│   │   │   └── cache.py           # Кэширование данных (задачи, коммиты)
-│   │   │
-│   │   └── utils/                 # Вспомогательные утилиты
-│   │       ├── __init__.py
-│   │       ├── validators.py      # Валидация входных данных
-│   │       ├── formatters.py      # Форматирование вывода
-│   │       └── decorators.py      # Декораторы для обработки ошибок
-│   │
-│   ├── tests/                     # Тесты
-│   │   ├── __init__.py
-│   │   ├── unit/                  # Модульные тесты
-│   │   │   ├── test_models.py
-│   │   │   └── test_parsing.py
-│   │   └── integration/           # Интеграционные тесты
-│   │       ├── test_cli.py
-│   │       ├── test_jira.py
-│   │       └── test_gitlab.py
-│   │
-│   └── docs/                      # Документация
-│       ├── MULTI-PROFILE.md       # Спецификация мультипрофильности
-│       └── ARCHITECTURE.md        # Описание архитектуры
-│
-├── pyproject.toml                 # Конфигурация проекта
-├── poetry.lock
-├── lit.spec                       # Спецификация для PyInstaller
-├── .pre-commit-config.yaml        # Линтеры
-├── release-please.yml             # CI/CD
-├── CHANGELOG.md
-├── LICENSE
-└── README.md
+src/lit/
+├── __init__.py             # из cli.py: cli, main (re-export для entry point)
+├── __main__.py             # python -m lit
+├── cli.py                  # бывший lit.py
+├── constants.py
+├── config_manager.py
+├── init.py
+├── parser.py
+├── utils.py
+├── core/
+│   ├── __init__.py
+│   └── worklog_manager.py
+└── integrations/
+    ├── __init__.py
+    ├── jira.py
+    ├── jira_push.py
+    └── gitlab.py
+
+tests/      
+├── test_lit.py               # тестирует cli
+├── test_init.py        
+├── test_import_gitlab.py     # переименование в test_gitlab.py — отдельным коммитом
+└── test_push.py              # переименование в test_jira_push.py — отдельным коммитом
 ```
 
-### Ключевые изменения:
-1. **Чёткое разделение ответственности**:
-   - `cli/` содержит только логику работы с командной строкой
-   - `integrations/` инкапсулирует все внешние API
-   - `core/` отвечает за бизнес-логику приложения
+Что меняется:
+- `pyproject.toml`: `packages = ["src/lit"]` + `sources = ["src"]`,
+  убрать `only-include` со списком плоских модулей;
+- `pyproject.toml`: добавить `[tool.coverage.run]` с
+  `source = ["src/lit"]` и `omit = ["tests/*"]` — чтобы покрытие
+  считало только код;
+- `entry point` остаётся `lit = "lit:cli"`, но `cli` теперь
+  ре-экспортируется из `src/lit/__init__.py`;
+- тесты: `git mv test_*.py tests/` — импорты **не меняются**, они уже
+  пишут `from lit.core.worklog_manager import ...`, а `lit` установлен
+  editable через `uv sync`;
+- `unittest discover` из корня находит `tests/` рекурсивно — команды
+  в README не меняются;
+- `git mv` для исходников — сохраняет историю.
 
-2. **Улучшенная поддерживаемость**:
-   - Все компоненты изолированы и тестируемы
-   - Добавлен модуль `storage/` для централизованного управления данными
-   - Утилиты разбиты по функциональному назначению
+## Отложенные улучшения (не сейчас, но обсуждено)
 
-3. **Мультипрофильность (DRAFT)**:
-   - Реализация через `profile_manager.py`
-   - Конфиги профилей хранятся в `~/.lit/profiles/`
-   - Поддержка связок задач через `MULTI-PROFILE.md`
-
-4. **Безопасность изменений**:
-   - Полное покрытие тестами (unit + integration)
-   - Интеграция с pre-commit и CI/CD
-
-### Преимущества новой структуры:
-1. **Упрощение разработки**:
-   ```python
-   # Пример использования новой структуры:
-   from lit.integrations.jira import JiraIntegration
-   from lit.storage.config_manager import ConfigManager
-
-   config = ConfigManager()
-   jira = JiraIntegration(config)
-   jira.push_worklog(entry)
-   ```
-
-2. **Лёгкое расширение**:
-   - Добавление новой интеграции (например, GitHub) через наследование от `BaseIntegration`
-   - Создание команд CLI через шаблон Command
-
-3. **Прозрачность данных (пока очень поверхностно)**:
-   - Все операции с хранилищем через `FileStorage`
-   - Автоматическое кэширование через `CacheManager`
-
-4. **Гибкая конфигурация**:
-   ```ini
-   # Пример мультипрофильного конфига:
-   [profiles]
-   active = zb
-
-   [zb]
-   jira_url = https://jira.company.com
-   gitlab_token = glpat-xyz
-   ```
-
-Такой подход соответствует принципам чистой архитектуры и позволяет легко масштабировать функционал.
+- **`core/models.py`** — `WorklogEntry` dataclass вместо `dict` в
+  `add_entry`/`pars_store`/`push_entries`. Реальное улучшение
+  типизации, но это рефакторинг **логики**, а не перемещение —
+  отдельный цикл.
+- **`core/parsing/lit_store_parser.py`** — `parser.py` переедет туда
+  при переезде на `src/` (логично, но не блокер).
+- **`cli/commands/*`** — разбить `cli.py` на модули по командам.
+  Сейчас 6 команд, `if/elif` в `process_arguments` читается лучше
+ 6 файлов. Откладываем, пока команд не станет >10.
+- **`tests/unit/` + `tests/integration/`** — разделить тесты по
+  типу. Сейчас все 44 — unit с моками; разделять нечего. Появится
+  настоящий integration-тест (живой Jira/GitLab) — тогда разделим.
+- **`storage/profile_manager.py`** — реализация мультипрофиля.
+  Отдельная задача, см. `MULTI-PROFILE.md` (draft).
