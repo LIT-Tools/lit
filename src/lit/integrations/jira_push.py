@@ -5,8 +5,8 @@ from jira.exceptions import JIRAError
 from datetime import datetime
 from tzlocal import get_localzone
 import os
-from config_manager import get_jira
-from constants import LIT_DIR
+from lit.config_manager import get_jira
+from lit.constants import LIT_DIR
 
 os.makedirs(LIT_DIR, exist_ok=True)
 

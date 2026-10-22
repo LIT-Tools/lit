@@ -1,5 +1,7 @@
 # AGENTS.md
 
+Общайся со мной на Русском языке.
+
 ## О проекте
 CLI-инструмент `lit` (Logging Integrated Timekeeper) для управления ворклогами с интеграцией Jira и GitLab. Стек: Python 3.9+, uv.
 

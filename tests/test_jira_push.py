@@ -5,7 +5,7 @@ from tzlocal import get_localzone
 from jira.exceptions import JIRAError
 
 # Импортируем тестируемые функции
-from integrations.jira_push import add_worklog
+from lit.integrations.jira_push import add_worklog
 
 
 class TestAddWorklog(unittest.TestCase):

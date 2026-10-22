@@ -6,9 +6,9 @@ import os
 import re
 import subprocess
 from datetime import datetime, timedelta, time as dt_time
-from constants import LIT_HISTORY, LIT_STORE
-from parser import pars_store
-from utils import sort_key
+from lit.constants import LIT_HISTORY, LIT_STORE
+from lit.parser import pars_store
+from lit.utils import sort_key
 from prompt_toolkit import PromptSession
 
 CUSTOM_EDITOR = ''

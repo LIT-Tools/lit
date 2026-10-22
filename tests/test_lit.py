@@ -31,7 +31,7 @@ class TestWorklogManager(unittest.TestCase):
         def strftime(self, fmt):
             return self._fixed_time.strftime(fmt)
 
-    @patch('core.worklog_manager.datetime')
+    @patch('lit.core.worklog_manager.datetime')
     @patch('builtins.open', new_callable=mock_open)
     def test_two_entries_success(self, mock_file, mock_datetime):
         mock_datetime.side_effect = lambda *args, **kw: self.MockedDateTime(*args, **kw)
@@ -61,9 +61,9 @@ class TestWorklogManager(unittest.TestCase):
 
     @patch('lit.add_worklog')  # Добавляем мок для add_worklog
     @patch('lit.jira_connect')  # Добавляем мок для jira_connect
-    @patch('core.worklog_manager.PromptSession')
+    @patch('lit.core.worklog_manager.PromptSession')
     @patch('builtins.print')
-    @patch('core.worklog_manager.datetime')
+    @patch('lit.core.worklog_manager.datetime')
     @patch('builtins.open', new_callable=mock_open)
     def test_push_command(self, mock_file, mock_datetime, mock_print, mock_prompt_session, mock_jira_connect, mock_add_worklog): # mock_add_worklog
         # Настройка моков
@@ -118,9 +118,9 @@ class TestWorklogManager(unittest.TestCase):
         mock_print.assert_any_call("Записей успешно отправлено: 1")
         mock_print.assert_any_call("Записей неотправленных записей: 0")
 
-    @patch('core.worklog_manager.PromptSession')
+    @patch('lit.core.worklog_manager.PromptSession')
     @patch('builtins.print')
-    @patch('core.worklog_manager.datetime')
+    @patch('lit.core.worklog_manager.datetime')
     @patch('builtins.open', new_callable=mock_open)
     def test_push_command_cancel(self, mock_file, mock_datetime, mock_print, mock_prompt_session):
         # Настройка моков
@@ -153,7 +153,7 @@ class TestWorklogManager(unittest.TestCase):
         mock_print.assert_any_call("   [14:30 - 16:30] TASK-123 2h `Тестовая запись`")
         mock_print.assert_any_call("Отмена отправки.")
 
-    @patch('core.worklog_manager.datetime')
+    @patch('lit.core.worklog_manager.datetime')
     @patch('builtins.open', new_callable=mock_open)
     def test_cli_add_command(self, mock_file, mock_datetime):
         # Настройка фиктивного времени
@@ -591,7 +591,7 @@ class TestEditEntries(unittest.TestCase):
         self.mock_load = patch.object(WorklogManager, '_load').start()
 
         # Мокируем глобальные переменные
-        self.patcher = patch.multiple('core.worklog_manager',
+        self.patcher = patch.multiple('lit.core.worklog_manager',
                                       LIT_STORE='/fake/path/.litstore',
                                       CUSTOM_EDITOR=''
                                       )

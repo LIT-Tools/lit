@@ -9,16 +9,16 @@ from pathlib import Path
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
 from prompt_toolkit.patch_stdout import patch_stdout
-from init import init_config
-from parser import pars_store
-from integrations.jira import load_tasks_from_jira
-from integrations.gitlab import load_commits_from_gitlab
-from integrations.jira_push import add_worklog, jira_connect
-from utils import sort_key, load_dict, safe_split
-from core.worklog_manager import WorklogManager
+from lit.init import init_config
+from lit.parser import pars_store
+from lit.integrations.jira import load_tasks_from_jira
+from lit.integrations.gitlab import load_commits_from_gitlab
+from lit.integrations.jira_push import add_worklog, jira_connect
+from lit.utils import sort_key, load_dict, safe_split
+from lit.core.worklog_manager import WorklogManager
 
-from config_manager import get_user
-from constants import (
+from lit.config_manager import get_user
+from lit.constants import (
     LIT_DIR, LIT_STORE, LIT_HISTORY,
     CONFIG_FILE, COMMITS_FILE, TASKS_FILE,
 )
@@ -251,5 +251,3 @@ def cli() -> None:
     process_arguments()
 
 
-if __name__ == '__main__':
-    cli()

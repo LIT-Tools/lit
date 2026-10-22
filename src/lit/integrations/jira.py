@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import os
 import json
-from config_manager import get_jira
+from lit.config_manager import get_jira
 
 #TODO В утилсы
 def save_commits(data: dict):
@@ -16,7 +16,7 @@ def save_commits(data: dict):
     except Exception as e:
         print(f"Error saving commits: {str(e)}")
 
-from constants import LIT_DIR, TASKS_FILE
+from lit.constants import LIT_DIR, TASKS_FILE
 os.makedirs(LIT_DIR, exist_ok=True)
 
 

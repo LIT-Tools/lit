@@ -1,6 +1,6 @@
 """Чтение конфигурации lit (~/.lit/.litconfig)."""
 from configparser import RawConfigParser
-from constants import CONFIG_FILE
+from lit.constants import CONFIG_FILE
 
 
 def load_config(path=None) -> RawConfigParser:

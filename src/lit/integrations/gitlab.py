@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 import re
 import os
 import json
-from config_manager import get_gitlab
-from constants import LIT_DIR, COMMITS_FILE
+from lit.config_manager import get_gitlab
+from lit.constants import LIT_DIR, COMMITS_FILE
 
 os.makedirs(LIT_DIR, exist_ok=True)
 

@@ -3,7 +3,7 @@ import os
 import questionary
 from configparser import ConfigParser
 from pathlib import Path
-from constants import LIT_DIR, COMMITS_FILE, CONFIG_FILE
+from lit.constants import LIT_DIR, COMMITS_FILE, CONFIG_FILE
 
 os.makedirs(LIT_DIR, exist_ok=True)
 

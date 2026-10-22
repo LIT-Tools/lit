@@ -3,7 +3,7 @@ import configparser
 import importlib
 import unittest
 from unittest.mock import patch, mock_open, Mock
-from init import CONFIG_FILE
+from lit.init import CONFIG_FILE
 from pathlib import Path
 
 
@@ -15,7 +15,7 @@ class TestInitConfig(unittest.TestCase):
         self.test_home = os.path.abspath("temp_home")
         os.environ["HOME"] = self.test_home
         # Перезагружаем модуль, чтобы пути обновились с учетом нового HOME
-        import init
+        from lit import init
         importlib.reload(init)
         self.module = init
 
@@ -28,8 +28,8 @@ class TestInitConfig(unittest.TestCase):
 
     @patch("builtins.print")
     @patch("builtins.open", new_callable=mock_open)
-    @patch("init.questionary.password")
-    @patch("init.questionary.text")
+    @patch("lit.init.questionary.password")
+    @patch("lit.init.questionary.text")
     def test_init_config_first_run(self, mock_text, mock_password, mock_file_open, mock_print):
         """
         Тестирование создания конфига с нуля.
@@ -90,8 +90,8 @@ class TestInitConfig(unittest.TestCase):
 
     @patch("builtins.print")
     @patch("builtins.open", new_callable=mock_open)
-    @patch("init.questionary.password")
-    @patch("init.questionary.text")
+    @patch("lit.init.questionary.password")
+    @patch("lit.init.questionary.text")
     @patch.object(Path, "exists", return_value=True)  # Мокаем проверку существования файла
     def test_init_config_with_existing_config(self, mock_exists, mock_text, mock_password, mock_file_open, mock_print):
         """
@@ -133,8 +133,8 @@ class TestInitConfig(unittest.TestCase):
 
     @patch("builtins.print")
     @patch("builtins.open", new_callable=mock_open)
-    @patch("init.questionary.password")
-    @patch("init.questionary.text")
+    @patch("lit.init.questionary.password")
+    @patch("lit.init.questionary.text")
     def test_login_generated_from_email(self, mock_text, mock_password, mock_file_open, mock_print):
         """
         Проверка автогенерации логина из email, если логин не введен.
