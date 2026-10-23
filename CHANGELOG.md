@@ -1,5 +1,64 @@
 # Changelog
 
+## [1.2.1](https://github.com/LIT-Tools/lit/compare/v1.2.0...v1.2.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* **release:** sync uv.lock with 1.2.0 ([b7fb2de](https://github.com/LIT-Tools/lit/commit/b7fb2dedaa6ddab41f9a97b47241331a54358844))
+* **release:** sync uv.lock with 1.2.0 ([9652470](https://github.com/LIT-Tools/lit/commit/965247068b2b004636819cedc839fc6a30887fca))
+
+## [1.2.0](https://github.com/LIT-Tools/lit/compare/v1.1.0...v1.2.0) (2026-10-23)
+
+
+### Features
+
+* **calc_crap:** add report formats and CI threshold ([e22aa0e](https://github.com/LIT-Tools/lit/commit/e22aa0ec4eccbbf97e1bd6dceb6e4f2ca3f85c0b))
+* **config:** add jira api_version and cloud token guidance ([4f5f022](https://github.com/LIT-Tools/lit/commit/4f5f022e4058a71729a4f13e1dfbaa5b69e509d3))
+* **integrations:** add jira client factory with api version ([ab6eff2](https://github.com/LIT-Tools/lit/commit/ab6eff2583bc1cbcb2c263f87e4cee6bee969469))
+* **integrations:** add plain_text_to_adf for Jira v3 ([e80a867](https://github.com/LIT-Tools/lit/commit/e80a867971c4fda7ad7220141619b1be139bd9f6))
+* **integrations:** use ADF for worklog comment on Jira v3 ([14777d4](https://github.com/LIT-Tools/lit/commit/14777d4bd95b397ba8028dee639651bb53bfcac1))
+* **jira:** migrate to Jira REST API v3 ([04357fa](https://github.com/LIT-Tools/lit/commit/04357fa6e7508f320bc2db50821aad9bf700192e))
+
+
+### Bug Fixes
+
+* **cli:** add entry-point wrapper that builds parser before calling main ([72dc7c4](https://github.com/LIT-Tools/lit/commit/72dc7c4a469c9a1397360f9b198809b29ac4a60e))
+* **cli:** hint at quoted add message on parse error ([ea52c1a](https://github.com/LIT-Tools/lit/commit/ea52c1ad3d004cca10de127d9b4d934212ffcdc9))
+* **cli:** resolve version in src layout and frozen builds ([0061198](https://github.com/LIT-Tools/lit/commit/0061198d9258d09c7577bc431d937ae83dc4da0d))
+* **core:** repair tests and imports after step 3 refactoring ([aefc335](https://github.com/LIT-Tools/lit/commit/aefc33517e3a4550f286db92879daca8053f9f5e))
+* finalize test alignment and audit checklist after Step D ([f507bb6](https://github.com/LIT-Tools/lit/commit/f507bb68dbb2b91e1107f4886e667afb36b1236d))
+* **gitlab:** load commits from all branches ([eae11f1](https://github.com/LIT-Tools/lit/commit/eae11f1ab849cb51967f6946358423de690dee22))
+* **integrations:** repair jira pull pagination and currentUser jql ([d38cafc](https://github.com/LIT-Tools/lit/commit/d38cafcfd0080a73b110cce8ca21741a45597ca0))
+* make calc_crap work with src/ layout and tests/ ([7964de2](https://github.com/LIT-Tools/lit/commit/7964de2ed976178824d19b63943e7a9f2587e119))
+* **pyinstaller:** update spec path to src/lit/__main__.py ([3be1e79](https://github.com/LIT-Tools/lit/commit/3be1e79f4a1299161f8f681e5ff992de4cfd32f4))
+* restore zebrains defaults and drop author_username filter ([71653ea](https://github.com/LIT-Tools/lit/commit/71653eaed2b3d19ca6f26cbe2c11353d14ebc7a1))
+* **validation:** handle invalid calendar dates gracefully ([9c7610b](https://github.com/LIT-Tools/lit/commit/9c7610bbd9d6e70da10fe5b2b70d76f736323917))
+
+
+### Documentation
+
+* actualize README for uv and src layout ([a89877b](https://github.com/LIT-Tools/lit/commit/a89877b986c0fd0e0e3037f7d9439ae9a4eb34b3))
+* add agent documentation and git-commit-convention skill ([56dced8](https://github.com/LIT-Tools/lit/commit/56dced88e85fa4d6396b295779f44f7b2eeed0f6))
+* add auto-update draft from dev ([494f1f0](https://github.com/LIT-Tools/lit/commit/494f1f05f29d85ae9a0a61c182e464fc7cc9e9b5))
+* add Step 5 notes to refactoring log ([03f10b8](https://github.com/LIT-Tools/lit/commit/03f10b889f48e3130c7a12f84aa81ed3f639b20e))
+* add Step 6 notes to refactoring log ([d81a11f](https://github.com/LIT-Tools/lit/commit/d81a11f6a4c62cc6431387839c5ef049ba0bbdad))
+* consolidate refactoring docs and add Jira v3 plan ([f7d8b3d](https://github.com/LIT-Tools/lit/commit/f7d8b3df642831810f69b0fe6facb96bda3960cd))
+* dedup PATH in Windows install ([4f36ebe](https://github.com/LIT-Tools/lit/commit/4f36ebebebedf25ed5895b6d382ae9474095fa57))
+* fix badges, restore --branch and editor comment ([ccfa8a3](https://github.com/LIT-Tools/lit/commit/ccfa8a3cd92c7b67f8b5595baac2650b5a1e4148))
+* **integrations:** explain sys.modules shims, plan their removal ([773f00d](https://github.com/LIT-Tools/lit/commit/773f00df6a6f3b0a5144973111b19feb64e4ffc1))
+* **jira:** rewrite v3 plan and record spike ([6da1bc3](https://github.com/LIT-Tools/lit/commit/6da1bc32585bde3fe3d02589fe77c4761f874c18))
+* **jira:** sanitize spike notes and mark migration complete ([8e53f26](https://github.com/LIT-Tools/lit/commit/8e53f269eda7a759bf26989f7374ed69eb70bdbf))
+* **log:** add migration lessons from src/ move ([b8a6619](https://github.com/LIT-Tools/lit/commit/b8a66196931caa0dcbeb1edacde5717cd35502bc))
+* **loop:** mark steps 1-3 as complete ([130e968](https://github.com/LIT-Tools/lit/commit/130e9689f840edcf196a42370b93d6616f9c929b))
+* **refactoring:** add post-mortem for step 0 ([e5bc5f6](https://github.com/LIT-Tools/lit/commit/e5bc5f6b587be7b1500671f9ea1420e5b560f77a))
+* **refactoring:** add post-mortem for step 1 ([d37e17a](https://github.com/LIT-Tools/lit/commit/d37e17a485fd67a5a9cde507dd6ee576f9b3de55))
+* **refactoring:** add post-mortem for step 2 ([096b2a2](https://github.com/LIT-Tools/lit/commit/096b2a20fbc2346488d810b95eb15be7e7aea891))
+* **refactoring:** add post-mortem for step 3 ([421f552](https://github.com/LIT-Tools/lit/commit/421f552b56f765b545efa3f83038a5ff148a4bef))
+* **refactoring:** add Ralph Loop pipeline for incremental refactoring ([d04c88b](https://github.com/LIT-Tools/lit/commit/d04c88b42c45cc5f1786d5cf8effdb2f60c46fa5))
+* **refactoring:** mark step 0 baseline as complete ([22af351](https://github.com/LIT-Tools/lit/commit/22af35110b8a16d888f29f5d76c7c58521166d41))
+* restructure refactoring plan for src/ migration cycle ([830da7c](https://github.com/LIT-Tools/lit/commit/830da7c79b3742094a5ebb36523491375f7404f9))
+
 ## [1.1.0](https://github.com/LIT-Tools/lit/compare/v1.0.1...v1.1.0) (2025-04-06)
 
 
