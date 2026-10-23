@@ -1,4 +1,5 @@
 import json
+import os
 
 
 # ANSI-коды цвета
@@ -29,14 +30,21 @@ except OSError as e:
 crap_values = []  # Для сбора всех значений CRAP
 
 for filename, methods in cc_data.items():
-    if filename not in coverage_data["files"]:
+    if filename.startswith("test_") or filename.startswith("tests/"):
+        continue
+
+    coverage_files = coverage_data["files"]
+    cov_key = filename if filename in coverage_files else None
+    if cov_key is None:
+        # radon и coverage могут считать пути от разных корней (src/ или без него)
+        lookup = {os.path.basename(key): key for key in coverage_files}
+        cov_key = lookup.get(os.path.basename(filename))
+
+    if cov_key is None:
         print(f"Файл {filename} не найден в отчете о покрытии. Пропускаю...")
         continue
 
-    if filename.startswith("test_"):
-        continue
-
-    cov_percent = coverage_data["files"][filename]["summary"]["percent_covered"]
+    cov_percent = coverage_files[cov_key]["summary"]["percent_covered"]
     cov = cov_percent / 100
 
     for method in methods:
@@ -75,8 +83,8 @@ if crap_values:
     )
 
     print("\n" + "=" * 20)
-    print(f"  Max CRAP: {avg_color}{average_crap:.2f}{bcolors.ENDC}")
-    print(f"  Avg CRAP: {max_color}{max_crap:.2f}{bcolors.ENDC}")
+    print(f"  Max CRAP: {max_color}{max_crap:.2f}{bcolors.ENDC}")
+    print(f"  Avg CRAP: {avg_color}{average_crap:.2f}{bcolors.ENDC}")
     print("=" * 20)
 else:
     print("\nНет данных для расчета статистики CRAP")
