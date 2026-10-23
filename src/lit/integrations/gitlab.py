@@ -92,7 +92,6 @@ def load_commits_from_gitlab() -> None:
                     params={
                         'since': since_date_iso,
                         # 'until': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Добавляем верхнюю границу
-                        'author_username': user_email.split("@")[0],
                         # 'committer_username': username,  # Фильтруем и по коммиттеру
                         'with_stats': False,  # Убираем лишние данные
                         'page': page,

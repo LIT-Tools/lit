@@ -38,7 +38,7 @@ def init_config():
     # Секция [jira]
     # Zebrains-домен (определяем из email до вопросов)
     is_zebrains_user = "zebrains" in (user_email.split("@")[1] if "@" in user_email else "")
-    jira_url_default = "https://jira.zebrains.team" if is_zebrains_user else "https://jira.itech-group.ru"
+    jira_url_default = "https://jira.itech-group.ru" if is_zebrains_user else ""
     
     jira_login = questionary.text(
         "Jira login:",
@@ -67,7 +67,7 @@ def init_config():
     # Сначала запрашиваем URL
     gitlab_url = questionary.text(
         "GitLab URL:",
-        default=default.get("gitlab", "url", fallback="https://gitlab.zebrains.team" if is_zebrains_user else "https://gitlab.zebrains.team")
+        default=default.get("gitlab", "url", fallback="https://gitlab.zebrains.team" if is_zebrains_user else "")
     ).ask()
 
     gitlab_token_instruction = f"\n  [Select scopes: api]\n  [Получить токен: {gitlab_url}/-/user_settings/personal_access_tokens]"
