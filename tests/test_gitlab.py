@@ -112,6 +112,67 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
 
         self.mock_save_commits.assert_called_once_with({'TEST-456': ['Valid commit']})
 
+    def test_all_branches_requested(self):
+        """Коммиты запрашиваются из всех веток, а не только из default branch."""
+        self.mock_requests.get.side_effect = [
+            self.create_response([{'id': 1}]),
+            self.create_response([]),
+            self.create_response([
+                {
+                    'id': 'non-default-branch-commit',
+                    'author_email': 'test_user@example.com',
+                    'committer_email': 'test_user@example.com',
+                    'message': 'TEST-420 Commit from feature branch'
+                }
+            ]),
+            self.create_response([])
+        ]
+
+        lit.integrations.gitlab.load_commits_from_gitlab()
+
+        self.mock_requests.get.assert_any_call(
+            'https://gitlab.example.com/api/v4/projects/1/repository/commits',
+            headers={'Private-Token': 'fake_token'},
+            params={
+                'since': '2022-12-25T12:00:00+00:00',
+                'all': True,
+                'with_stats': False,
+                'page': 1,
+                'per_page': 100
+            }
+        )
+        self.mock_save_commits.assert_called_once_with({
+            'TEST-420': ['Commit from feature branch']
+        })
+
+    def test_duplicate_commits_are_deduplicated(self):
+        """Один и тот же коммит из нескольких веток попадает в результат один раз."""
+        self.mock_requests.get.side_effect = [
+            self.create_response([{'id': 1}]),
+            self.create_response([]),
+            self.create_response([
+                {
+                    'id': 'same-commit',
+                    'author_email': 'test_user@example.com',
+                    'committer_email': 'test_user@example.com',
+                    'message': 'TEST-123 Fix bug'
+                },
+                {
+                    'id': 'same-commit',
+                    'author_email': 'test_user@example.com',
+                    'committer_email': 'test_user@example.com',
+                    'message': 'TEST-123 Fix bug'
+                }
+            ]),
+            self.create_response([])
+        ]
+
+        lit.integrations.gitlab.load_commits_from_gitlab()
+
+        self.mock_save_commits.assert_called_once_with({
+            'TEST-123': ['Fix bug']
+        })
+
     def test_error_handling(self):
         """Тест обработки ошибок API"""
         import requests
