@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/LIT-Tools/lit/compare/v1.2.0...v1.2.1) (2026-10-23)
+
+
+### Bug Fixes
+
+* **release:** sync uv.lock with 1.2.0 ([b7fb2de](https://github.com/LIT-Tools/lit/commit/b7fb2dedaa6ddab41f9a97b47241331a54358844))
+* **release:** sync uv.lock with 1.2.0 ([9652470](https://github.com/LIT-Tools/lit/commit/965247068b2b004636819cedc839fc6a30887fca))
+
 ## [1.2.0](https://github.com/LIT-Tools/lit/compare/v1.1.0...v1.2.0) (2026-10-23)
 
 
