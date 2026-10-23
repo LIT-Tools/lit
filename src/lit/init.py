@@ -24,16 +24,6 @@ def init_config():
         validate=lambda val: "@" in val or "Email обязателен"
     ).ask()
 
-    # Автогенерация логина из email если нет в конфиге
-    email_login = user_email.split("@")[0] if "@" in user_email else ""
-    current_login = default.get("user", "login", fallback=email_login)
-
-    user_login = questionary.text(
-        "User login:",
-        default=current_login,
-        validate=lambda val: len(val) > 0 or "Логин обязателен"
-    ).ask()
-
     editor = questionary.text(
         "Editor:",
         default=default.get("user", "editor", fallback=""),
@@ -41,7 +31,6 @@ def init_config():
     ).ask()
 
     config["user"] = {
-        "login": user_login,
         "email": user_email,
         "editor": editor
     }
@@ -49,7 +38,7 @@ def init_config():
     # Секция [jira]
     jira_login = questionary.text(
         "Jira login:",
-        default=default.get("jira", "login", fallback=user_login)
+        default=default.get("jira", "login", fallback=user_email.split("@")[0] if "@" in user_email else "")
     ).ask()
     # TODO API token пока почему то не срабатывает, нужно разобраться, сейчас оставил в подсказке только пароль
     jira_pass = questionary.password(
@@ -59,14 +48,10 @@ def init_config():
 
     config["jira"] = {
         "login": jira_login,
-        "email": questionary.text(
-            "Jira email:",
-            default=default.get("jira", "email", fallback=user_email)
-        ).ask(),
         "pass": jira_pass,
         "url": questionary.text(
             "Jira URL:",
-            default=default.get("jira", "url", fallback="https://jira.itech-group.ru")
+            default=default.get("jira", "url", fallback=jira_url_default)
         ).ask(),
         "days": questionary.text(
             "Days to sync:",
@@ -75,22 +60,23 @@ def init_config():
     }
 
     # Секция [gitlab]
-    gitlab_login = questionary.text(
-        "GitLab login:",
-        default=default.get("gitlab", "login", fallback=user_login)
-    ).ask()
-
     # Сначала запрашиваем URL
     gitlab_url = questionary.text(
         "GitLab URL:",
-        default=default.get("gitlab", "url", fallback="https://gitlab.zebrains.team")
+        default=default.get("gitlab", "url", fallback="https://gitlab.zebrains.team" if is_zebrains else "https://gitlab.zebrains.team")
     ).ask()
 
-    # Теперь используем полученный URL для формирования инструкции
-    gitlab_token_instruction = f"\n  [Получить токен: {gitlab_url}/-/user_settings/personal_access_tokens]"
+    # Zebrains-домен
+    domain = gitlab_url.split("/")[-1].split(":")[0] if "/" in gitlab_url else gitlab_url
+    is_zebrains = "zebrains" in domain
+    if is_zebrains and not default.get("gitlab", "url"):
+        gitlab_url = "https://gitlab.zebrains.team"
+    # Аналогично для Jira
+    jira_url_default = "https://jira.zebrains.team" if is_zebrains else "https://jira.itech-group.ru"
+    
+    gitlab_token_instruction = f"\n  [Select scopes: api]\n  [Получить токен: {gitlab_url}/-/user_settings/personal_access_tokens]"
 
     config["gitlab"] = {
-        "login": gitlab_login,
         "email": questionary.text(
             "GitLab email:",
             default=default.get("gitlab", "email", fallback=user_email)

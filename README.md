@@ -137,18 +137,16 @@ lit pull [--jira] [--gitlab]
 Пример `~/.lit/.litconfig`:
 ```ini
 [user]
-login = user
 email = user@domain.com
+editor = nano
 
 [jira]
 login = user
-email = user@domain.com
 pass = password
 url = https://jira.com
 days = 30
 
 [gitlab]
-login = user
 email = user@domain.com
 url = https://gitlab.com
 token = ваш_личный_токен

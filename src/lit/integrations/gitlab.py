@@ -31,18 +31,8 @@ def load_commits_from_gitlab() -> None:
 
     headers = {'Private-Token': TOKEN}
     url = GITLAB_URL
-    target_user = TARGET_USER
+    user_email = USER_EMAIL
     days = DAYS
-    
-    # Получаем информацию о текущем пользователе
-    response = requests.get(f'{url}/api/v4/user', headers=headers)
-    response.raise_for_status()
-    user = response.json()
-    username = user['username']
-    
-    # Используем login из конфига, если он указан
-    if target_user:
-        username = target_user
 
     # Рассчитываем дату DAYS дней назад
     since_datetime = datetime.now() - timedelta(days=days)
@@ -100,7 +90,7 @@ def load_commits_from_gitlab() -> None:
                     params={
                         'since': since_date_iso,
                         # 'until': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Добавляем верхнюю границу
-                        'author_username': username,
+                        'author_username': user_email.split("@")[0],
                         # 'committer_username': username,  # Фильтруем и по коммиттеру
                         'with_stats': False,  # Убираем лишние данные
                         'page': page,
@@ -114,11 +104,8 @@ def load_commits_from_gitlab() -> None:
 
                 for commit in commits:
                     # Проверяем и автора и коммиттера
-                    commit_author = commit['author_email'].split("@")[0]
-                    commit_committer = commit['committer_email'].split("@")[0]
-
                     if len(commit['message']) > 0 and (
-                            commit_author.lower() == username.lower() or commit_committer.lower() == username.lower()):
+                            commit['author_email'].lower() == user_email.lower() or commit['committer_email'].lower() == user_email.lower()):
                         if commit['message'].find('Merge branch') == -1:
                             comments.append(commit['message'].rstrip())
 
@@ -147,7 +134,7 @@ def load_commits_from_gitlab() -> None:
     # Сортируем задачи и удаляем пустые
     sorted_tasks = {k: v for k, v in sorted(task_commits.items()) if k and v}
 
-    print(f'\rНайдено {useful_commits} пригодных коммитов из {len(comments)} в {len(sorted_tasks)} репозиториях за авторством {username}')
+    print(f'\rНайдено {useful_commits} пригодных коммитов из {len(comments)} в {len(sorted_tasks)} репозиториях за авторством {user_email}')
 
     save_commits(sorted_tasks)
 
@@ -156,9 +143,9 @@ def load_commits_from_gitlab() -> None:
 def load_config(path: str | None = None) -> dict:
     """Алиас для совместимости с мокающими тестами."""
     config = get_gitlab()
-    global GITLAB_URL, TOKEN, TARGET_USER, DAYS
+    global GITLAB_URL, TOKEN, USER_EMAIL, DAYS
     GITLAB_URL = config["url"]
     TOKEN = config["token"]
-    TARGET_USER = config["login"]
+    USER_EMAIL = config.get("email", config.get("login", ""))  # fallback для старых конфигов
     DAYS = config["days"]
     return config

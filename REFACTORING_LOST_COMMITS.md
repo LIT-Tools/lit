@@ -31,22 +31,22 @@
 
 ### 🟢 Шаг A — Misc (независимые мелкие правки)
 
-- [ ] `7f8e5e83` — `refactor: removed print` (лишний `print(cmd)` в
+- [x] `7f8e5e83` — `refactor: removed print` (лишний `print(cmd)` в
   `edit_entries`)
-- [ ] `2bb20664` — `docs: fixed duplicate path in PATH during installation`
+- [x] `2bb20664` — `docs: fixed duplicate path in PATH during installation`
   (Windows install в README)
-- [ ] `4a19517b` — `docs: added bug to check list` (в README-планы
+- [x] `4a19517b` — `docs: added bug to check list` (в README-планы
   добавить баг «после `pull` нужен перезапуск REPL»)
 
 ### 🟢 Шаг B — Dev-tools: CRAP-анализ
 
-- [ ] `1613c1d1` — `test: added calc CRAP` (новый `calc_crap.py` +
+- [x] `1613c1d1` — `test: added calc CRAP` (новый `calc_crap.py` +
   `.gitignore` `cc.json`/`coverage.json` + `radon` в dev + README test
   section с `coverage run --branch`, `coverage json`, `radon cc`)
 
 ### 🟢 Шаг C — Документация: пример `.litconfig`
 
-- [ ] `e8760eb0` — `docs: fixed example .litconfig`
+- [-] `e8760eb0` — `docs: fixed example .litconfig`
   (уточнить, не пересекается ли с `1e5cea6b` из Шага D; если
   дубликат — отметить `[-]`)
 

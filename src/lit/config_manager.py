@@ -15,7 +15,6 @@ def get_user(cfg=None) -> dict:
     """Получить секцию [user]."""
     cfg = cfg or load_config()
     return {
-        "login": cfg.get("user", "login", fallback=""),
         "email": cfg.get("user", "email", fallback=""),
         "editor": cfg.get("user", "editor", fallback=""),
     }
@@ -26,7 +25,6 @@ def get_jira(cfg=None) -> dict:
     cfg = cfg or load_config()
     return {
         "login": cfg.get("jira", "login", fallback=""),
-        "email": cfg.get("jira", "email", fallback=""),
         "pass": cfg.get("jira", "pass", fallback=""),
         "url": cfg.get("jira", "url", fallback=""),
         "days": cfg.getint("jira", "days", fallback=30),
@@ -36,9 +34,9 @@ def get_jira(cfg=None) -> dict:
 def get_gitlab(cfg=None) -> dict:
     """Получить секцию [gitlab]."""
     cfg = cfg or load_config()
+    email = cfg.get("gitlab", "email", fallback="") or cfg.get("gitlab", "login", fallback="")
     return {
-        "login": cfg.get("gitlab", "login", fallback=""),
-        "email": cfg.get("gitlab", "email", fallback=""),
+        "email": email,
         "url": cfg.get("gitlab", "url", fallback=""),
         "token": cfg.get("gitlab", "token", fallback=""),
         "days": cfg.getint("gitlab", "days", fallback=30),
