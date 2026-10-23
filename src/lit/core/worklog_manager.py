@@ -7,6 +7,7 @@ import re
 import subprocess
 from datetime import datetime, timedelta, time as dt_time
 from lit.constants import LIT_HISTORY, LIT_STORE
+from lit.exceptions import JiraIntegrationError
 from lit.parser import pars_store
 from lit.utils import sort_key
 from prompt_toolkit import PromptSession
@@ -137,11 +138,23 @@ class WorklogManager:
             for log in store_dist:
                 if not log['disabled']:
                     message = log['message'].replace("\\n", '\n')
-                    id, err = add_worklog(jira, log['code'], log['duration'], message, log['date'], log['start'])
-                    if not id:
-                        errors.append(f"# {log['log'].strip('\n')} # {err}")
+                    try:
+                        worklog_id = add_worklog(
+                            jira,
+                            log['code'],
+                            log['duration'],
+                            message,
+                            log['date'],
+                            log['start'],
+                        )
+                    except JiraIntegrationError as e:
+                        errors.append(
+                            f"# {log['log'].strip('\n')} # {e}"
+                        )
                     else:
-                        saved.append(f"{log['log'].strip('\n')} # {id}")
+                        saved.append(
+                            f"{log['log'].strip('\n')} # {worklog_id}"
+                        )
                 else:
                     errors.append(f"{log['log'].strip('\n')}")
             self.entries = errors

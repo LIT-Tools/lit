@@ -12,20 +12,10 @@ from lit.integrations.jira_push import jira_connect
 
 
 class TestJiraConnect(unittest.TestCase):
-    def _cfg(self):
-        return {
-            "url": "https://example.atlassian.net",
-            "login": "u@example.com",
-            "pass": "token",
-            "days": 30,
-        }
-
     @patch("builtins.print")
-    @patch("lit.integrations.jira_push.get_jira")
-    @patch("lit.integrations.jira_push.JIRA")
-    def test_connect_raises_on_failure(self, mock_jira_cls, mock_get_jira, _print):
-        mock_get_jira.return_value = self._cfg()
-        mock_jira_cls.side_effect = Exception("boom")
+    @patch("lit.integrations.jira_push.build_jira")
+    def test_connect_raises_on_failure(self, mock_build, _print):
+        mock_build.side_effect = JiraIntegrationError("boom")
 
         with self.assertRaises(JiraIntegrationError) as ctx:
             jira_connect()
@@ -33,27 +23,34 @@ class TestJiraConnect(unittest.TestCase):
         self.assertIn("boom", str(ctx.exception))
 
     @patch("builtins.print")
-    @patch("lit.integrations.jira_push.get_jira")
-    @patch("lit.integrations.jira_push.JIRA")
-    def test_connect_raises_on_check_failure(
-        self, mock_jira_cls, mock_get_jira, _print
-    ):
-        mock_get_jira.return_value = self._cfg()
-        mock_jira_cls.return_value.server_info.side_effect = Exception("auth failed")
+    @patch("lit.integrations.jira_push.build_jira")
+    def test_connect_raises_on_check_failure(self, mock_build, _print):
+        mock_build.return_value.server_info.side_effect = Exception("auth failed")
 
         with self.assertRaises(JiraIntegrationError):
             jira_connect()
 
     @patch("builtins.print")
-    @patch("lit.integrations.jira_push.get_jira")
-    @patch("lit.integrations.jira_push.JIRA")
-    def test_connect_returns_client(self, mock_jira_cls, mock_get_jira, _print):
-        mock_get_jira.return_value = self._cfg()
-        client = mock_jira_cls.return_value
+    @patch("lit.integrations.jira_push.build_jira")
+    def test_connect_wraps_jira_error_on_check(self, mock_build, _print):
+        mock_build.return_value.server_info.side_effect = JIRAError(
+            status_code=401, text="denied"
+        )
+
+        with self.assertRaises(JiraIntegrationError) as ctx:
+            jira_connect()
+
+        self.assertIn("401", str(ctx.exception))
+
+    @patch("builtins.print")
+    @patch("lit.integrations.jira_push.build_jira")
+    def test_connect_returns_client(self, mock_build, _print):
+        client = mock_build.return_value
         client.server_info.return_value = {"version": "1001.0.0"}
         client.current_user.return_value = "account-id"
 
         self.assertIs(jira_connect(), client)
+        mock_build.assert_called_once_with()
 
 
 class TestLoadTasksFromJiraErrors(unittest.TestCase):

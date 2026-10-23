@@ -7,6 +7,7 @@ from jira.exceptions import JIRAError
 from lit.exceptions import ConfigError, JiraIntegrationError
 from lit.integrations.jira_client import (
     build_jira,
+    client_api_version,
     format_jira_error,
     resolve_api_version,
     search_all_issues,
@@ -35,6 +36,27 @@ class TestResolveApiVersion(unittest.TestCase):
     def test_invalid_version(self):
         with self.assertRaises(ConfigError):
             resolve_api_version({"api_version": "4"})
+
+
+class TestClientApiVersion(unittest.TestCase):
+    def test_options_take_priority(self):
+        jira = MagicMock()
+        jira._options = {"rest_api_version": "2"}
+        jira._is_cloud = True
+        self.assertEqual(client_api_version(jira), "2")
+
+        jira._options = {"rest_api_version": "3"}
+        jira._is_cloud = False
+        self.assertEqual(client_api_version(jira), "3")
+
+    def test_fallback_to_cloud_flag(self):
+        jira = MagicMock()
+        jira._options = object()
+        jira._is_cloud = True
+        self.assertEqual(client_api_version(jira), "3")
+
+        jira._is_cloud = False
+        self.assertEqual(client_api_version(jira), "2")
 
 
 class TestBuildJira(unittest.TestCase):

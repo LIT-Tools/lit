@@ -48,6 +48,20 @@ def resolve_api_version(
     return "3" if getattr(jira, "_is_cloud", False) else "2"
 
 
+def client_api_version(jira: JIRA) -> str:
+    """Вернуть фактическую версию REST API, с которой работает клиент.
+
+    Для настоящего ``JIRA`` версия лежит в ``_options``. Для моков и
+    нестандартных клиентов ориентируемся на признак Cloud.
+    """
+    options = getattr(jira, "_options", None)
+    if isinstance(options, dict):
+        value = options.get("rest_api_version")
+        if value is not None:
+            return str(value)
+    return "3" if getattr(jira, "_is_cloud", False) else "2"
+
+
 def _make_client(cfg: dict, api_version: str) -> JIRA:
     """Создать ``JIRA`` с указанной версией REST API."""
     login = cfg.get("login") or cfg.get("email") or ""

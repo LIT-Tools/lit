@@ -76,7 +76,7 @@ class TestWorklogManager(unittest.TestCase):
         mock_jira = mock_jira_connect.return_value
 
         # Мокируем успешный вызов add_worklog
-        mock_add_worklog.return_value = ('73546546', None)
+        mock_add_worklog.return_value = '73546546'
 
         # Добавляем запись
         self.manager.add_entry(['TASK-123', '2', 'Тестовая запись'])
