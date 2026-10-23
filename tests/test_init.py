@@ -39,8 +39,8 @@ class TestInitConfig(unittest.TestCase):
         text_answers = [
             "test@example.com",  # User email
             "",  # Editor
-            "jirauser",  # Jira login
             "https://jira.test.com",  # Jira URL
+            "jirauser",  # Jira login
             "30",  # Jira days
             "https://gitlab.test.com",  # GitLab URL
             "gitlab@example.com",  # GitLab email
@@ -72,6 +72,7 @@ class TestInitConfig(unittest.TestCase):
         self.assertEqual(config.get("jira", "pass"), "jirapass")
         self.assertEqual(config.get("jira", "url"), "https://jira.test.com")
         self.assertEqual(config.get("jira", "days"), "30")
+        self.assertEqual(config.get("jira", "api_version"), "auto")
 
         # Проверяем секцию [gitlab]
         self.assertEqual(config.get("gitlab", "email"), "gitlab@example.com")
@@ -80,6 +81,48 @@ class TestInitConfig(unittest.TestCase):
         self.assertEqual(config.get("gitlab", "days"), "30")
 
         # Проверяем что сообщение было выведено
+        mock_print.assert_called_with("\n✅ Конфигурация сохранена в .litconfig")
+
+    @patch("builtins.print")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("lit.init.questionary.password")
+    @patch("lit.init.questionary.text")
+    def test_init_cloud_prompts_email_and_api_token(
+        self, mock_text, mock_password, mock_file_open, mock_print
+    ):
+        """Для Cloud запрашиваются email и API token, а не логин/пароль."""
+        text_answers = [
+            "user@example.com",  # User email
+            "",  # Editor
+            "https://example.atlassian.net",  # Jira URL
+            "user@example.com",  # Jira email
+            "30",  # Jira days
+            "https://gitlab.example.com",  # GitLab URL
+            "user@example.com",  # GitLab email
+            "30",  # GitLab days
+        ]
+        mock_text.side_effect = [
+            Mock(ask=lambda ans=ans: ans) for ans in text_answers
+        ]
+        mock_password.side_effect = [
+            Mock(ask=lambda: "jira-token"),
+            Mock(ask=lambda: "gitlab-token"),
+        ]
+
+        self.module.init_config()
+
+        handle = mock_file_open()
+        written = "".join(call.args[0] for call in handle.write.call_args_list)
+        config = configparser.RawConfigParser()
+        config.read_string(written)
+
+        self.assertEqual(config.get("jira", "login"), "user@example.com")
+        self.assertEqual(config.get("jira", "email"), "user@example.com")
+        self.assertEqual(config.get("jira", "pass"), "jira-token")
+        self.assertEqual(
+            config.get("jira", "url"), "https://example.atlassian.net"
+        )
+        self.assertEqual(config.get("jira", "api_version"), "auto")
         mock_print.assert_called_with("\n✅ Конфигурация сохранена в .litconfig")
 
     @patch("builtins.print")

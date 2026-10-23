@@ -16,9 +16,10 @@ from lit.integrations.jira import load_tasks_from_jira
 from lit.integrations.gitlab import load_commits_from_gitlab
 from lit.integrations.jira_push import add_worklog, jira_connect
 from lit.utils import sort_key, load_dict, safe_split
-from lit.core.worklog_manager import WorklogManager
+from lit.core.worklog_manager import LitArgumentParser, WorklogManager
 
 from lit.config_manager import get_user
+from lit.exceptions import LitError
 from lit.constants import (
     LIT_DIR, LIT_STORE, LIT_HISTORY,
     CONFIG_FILE, COMMITS_FILE, TASKS_FILE,
@@ -216,8 +217,12 @@ def main(parser):
 
 def create_argument_parser():
     """Создает и возвращает настроенный парсер аргументов"""
-    parser = argparse.ArgumentParser(description="Утилита для работы с ворклогами.")
-    subparsers = parser.add_subparsers(dest='command', help='Доступные команды')
+    parser = LitArgumentParser(description="Утилита для работы с ворклогами.")
+    subparsers = parser.add_subparsers(
+        dest='command',
+        help='Доступные команды',
+        parser_class=LitArgumentParser,
+    )
 
     parser.add_argument(
         '-v', '--version',
@@ -272,6 +277,10 @@ def process_arguments(args=None):
 
 def cli() -> None:
     """Entry point for the console script (``lit``)."""
-    process_arguments()
+    try:
+        process_arguments()
+    except LitError as e:
+        print(f"Ошибка: {e}", file=sys.stderr)
+        sys.exit(1)
 
 

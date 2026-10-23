@@ -76,7 +76,7 @@ class TestWorklogManager(unittest.TestCase):
         mock_jira = mock_jira_connect.return_value
 
         # Мокируем успешный вызов add_worklog
-        mock_add_worklog.return_value = ('73546546', None)
+        mock_add_worklog.return_value = '73546546'
 
         # Добавляем запись
         self.manager.add_entry(['TASK-123', '2', 'Тестовая запись'])
@@ -529,6 +529,52 @@ class TestValidation(unittest.TestCase):
                 self.assertIn(bad_date, output)
                 mock_save.assert_not_called()
                 self.assertEqual(manager.entries, [])
+
+class TestAddArgumentHint(unittest.TestCase):
+    def setUp(self):
+        self.manager = WorklogManager()
+        self.manager.entries = []
+
+    def test_unquoted_message_shows_quotes_hint(self):
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            self.manager.add_entry(['TASK-1', '8', 'текст', 'с', 'пробелами'])
+
+        output = stderr.getvalue()
+        self.assertIn('unrecognized arguments: с пробелами', output)
+        self.assertIn('lit add TASK-1 8 "текст с пробелами"', output)
+        self.assertNotIn('lit add TASK-1 1 "', output)
+        self.assertEqual(self.manager.entries, [])
+
+    def test_cli_unquoted_message_shows_quotes_hint(self):
+        from lit import create_argument_parser
+
+        parser = create_argument_parser()
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as cm:
+                parser.parse_args(
+                    ['add', 'TASK-1', '8', 'текст', 'с', 'пробелами']
+                )
+
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn(
+            'lit add TASK-1 8 "текст с пробелами"',
+            stderr.getvalue(),
+        )
+
+    def test_quoted_message_is_added_without_hint(self):
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr), \
+             patch.object(self.manager, '_save'), \
+             patch('builtins.print'):
+            self.manager.add_entry(
+                ['TASK-123', '8', 'текст с пробелами', '-d', '01.01.2026', '-t', '10:00']
+            )
+
+        self.assertEqual(stderr.getvalue(), '')
+        self.assertEqual(len(self.manager.entries), 1)
+
 
 class TestPullEntries(unittest.TestCase):
     def setUp(self):

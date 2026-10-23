@@ -5,13 +5,40 @@ import argparse
 import os
 import re
 import subprocess
+import sys
 from datetime import datetime, timedelta, time as dt_time
 from lit.constants import LIT_HISTORY, LIT_STORE
+from lit.exceptions import JiraIntegrationError
 from lit.parser import pars_store
 from lit.utils import sort_key
 from prompt_toolkit import PromptSession
 
 CUSTOM_EDITOR = ''
+
+ADD_MESSAGE_HINT = (
+    'Подсказка: если сообщение содержит пробелы, заключите его в кавычки:\n'
+    '  lit add TASK-1 8 "текст с пробелами"'
+)
+
+
+class LitArgumentParser(argparse.ArgumentParser):
+    """Парсер с подсказкой про кавычки для сообщения в add."""
+
+    def parse_args(self, args=None, namespace=None):
+        self._raw_args = list(args) if args is not None else sys.argv[1:]
+        return super().parse_args(args, namespace)
+
+    def error(self, message: str) -> None:
+        if 'unrecognized arguments' in message and self._is_add_command():
+            message = f"{message}\n\n{ADD_MESSAGE_HINT}"
+        super().error(message)
+
+    def _is_add_command(self) -> bool:
+        if self.prog.split()[-1] == 'add':
+            return True
+        raw_args = getattr(self, '_raw_args', [])
+        return bool(raw_args) and raw_args[0] == 'add'
+
 
 class WorklogManager:
     def __init__(self) -> None:
@@ -46,9 +73,12 @@ class WorklogManager:
         if isinstance(args, dict):
             opts = argparse.Namespace(**args)
         else:
-            parser = argparse.ArgumentParser(prog='lit add', exit_on_error=False)
+            parser = LitArgumentParser(prog='lit add', exit_on_error=False)
             self._configure_add_parser(parser)
-            opts = parser.parse_args(args)
+            try:
+                opts = parser.parse_args(args)
+            except SystemExit:
+                return
         try:
             opts.code = opts.code.upper()
             input_time = datetime.strptime(opts.time, "%H:%M").time()
@@ -137,11 +167,23 @@ class WorklogManager:
             for log in store_dist:
                 if not log['disabled']:
                     message = log['message'].replace("\\n", '\n')
-                    id, err = add_worklog(jira, log['code'], log['duration'], message, log['date'], log['start'])
-                    if not id:
-                        errors.append(f"# {log['log'].strip('\n')} # {err}")
+                    try:
+                        worklog_id = add_worklog(
+                            jira,
+                            log['code'],
+                            log['duration'],
+                            message,
+                            log['date'],
+                            log['start'],
+                        )
+                    except JiraIntegrationError as e:
+                        errors.append(
+                            f"# {log['log'].strip('\n')} # {e}"
+                        )
                     else:
-                        saved.append(f"{log['log'].strip('\n')} # {id}")
+                        saved.append(
+                            f"{log['log'].strip('\n')} # {worklog_id}"
+                        )
                 else:
                     errors.append(f"{log['log'].strip('\n')}")
             self.entries = errors

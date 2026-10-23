@@ -78,6 +78,7 @@ def load_commits_from_gitlab() -> None:
 
     # Собираем коммиты из всех проектов
     comments = []
+    seen_commits: set[str] = set()
     for index, project in enumerate(projects, 1):
         # Выводим прогресс обработки
         print(f'\rПоиск коммитов за {days} дней... {index}/{len(projects)}', end='', flush=True)
@@ -91,6 +92,7 @@ def load_commits_from_gitlab() -> None:
                     headers=headers,
                     params={
                         'since': since_date_iso,
+                        'all': True,  # Ищем во всех ветках, а не только в default branch
                         # 'until': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),  # Добавляем верхнюю границу
                         # 'committer_username': username,  # Фильтруем и по коммиттеру
                         'with_stats': False,  # Убираем лишние данные
@@ -104,6 +106,12 @@ def load_commits_from_gitlab() -> None:
                 commits = response.json()
 
                 for commit in commits:
+                    commit_id = commit.get('id')
+                    if commit_id:
+                        if commit_id in seen_commits:
+                            continue
+                        seen_commits.add(commit_id)
+
                     # Проверяем и автора и коммиттера
                     if len(commit['message']) > 0 and (
                             commit['author_email'].lower() == user_email.lower() or commit['committer_email'].lower() == user_email.lower()):

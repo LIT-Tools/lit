@@ -1,0 +1,67 @@
+"""Тесты подключения к Jira и границы CLI для LitError."""
+import io
+import unittest
+from unittest.mock import patch
+
+from jira.exceptions import JIRAError
+
+from lit import cli
+from lit.exceptions import JiraIntegrationError
+from lit.integrations.jira_push import jira_connect
+
+
+class TestJiraConnect(unittest.TestCase):
+    @patch("builtins.print")
+    @patch("lit.integrations.jira_push.build_jira")
+    def test_connect_raises_on_failure(self, mock_build, _print):
+        mock_build.side_effect = JiraIntegrationError("boom")
+
+        with self.assertRaises(JiraIntegrationError) as ctx:
+            jira_connect()
+
+        self.assertIn("boom", str(ctx.exception))
+
+    @patch("builtins.print")
+    @patch("lit.integrations.jira_push.build_jira")
+    def test_connect_raises_on_check_failure(self, mock_build, _print):
+        mock_build.return_value.server_info.side_effect = Exception("auth failed")
+
+        with self.assertRaises(JiraIntegrationError):
+            jira_connect()
+
+    @patch("builtins.print")
+    @patch("lit.integrations.jira_push.build_jira")
+    def test_connect_wraps_jira_error_on_check(self, mock_build, _print):
+        mock_build.return_value.server_info.side_effect = JIRAError(
+            status_code=401, text="denied"
+        )
+
+        with self.assertRaises(JiraIntegrationError) as ctx:
+            jira_connect()
+
+        self.assertIn("401", str(ctx.exception))
+
+    @patch("builtins.print")
+    @patch("lit.integrations.jira_push.build_jira")
+    def test_connect_returns_client(self, mock_build, _print):
+        client = mock_build.return_value
+        client.server_info.return_value = {"version": "1001.0.0"}
+        client.current_user.return_value = "account-id"
+
+        self.assertIs(jira_connect(), client)
+        mock_build.assert_called_once_with()
+
+
+class TestCliErrorBoundary(unittest.TestCase):
+    @patch("lit.process_arguments", side_effect=JiraIntegrationError("boom"))
+    def test_cli_exits_on_lit_error(self, _process_arguments):
+        with patch("sys.stderr", new_callable=io.StringIO) as stderr:
+            with self.assertRaises(SystemExit) as ctx:
+                cli()
+
+        self.assertEqual(ctx.exception.code, 1)
+        self.assertIn("boom", stderr.getvalue())
+
+
+if __name__ == "__main__":
+    unittest.main()
