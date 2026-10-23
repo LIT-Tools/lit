@@ -1,8 +1,8 @@
 # LIT: Logging Integrated Timekeeper
 
-[![CRAP](https://img.shields.io/badge/python-3.9+-blue?logo=python)]()
-[![CRAP](https://img.shields.io/badge/license-MIT-2E6F40)]()
-[![CRAP](https://img.shields.io/badge/coverage-83%25-2E6F40)]() 
+[![Python](https://img.shields.io/badge/python-3.9+-blue?logo=python)]()
+[![License](https://img.shields.io/badge/license-MIT-2E6F40)]()
+[![Coverage](https://img.shields.io/badge/coverage-83%25-2E6F40)]()
 [![CRAP](https://img.shields.io/badge/CRAP-8.5-2E6F40)]()
 
 Консольная утилита для удобного управления рабочими логами с интеграцией Jira и GitLab
@@ -138,7 +138,7 @@ lit pull [--jira] [--gitlab]
 ```ini
 [user]
 email = user@domain.com
-editor = nano
+editor = nano # C:\Program Files\Notepad++\notepad++.exe
 
 [jira]
 login = user
@@ -239,7 +239,7 @@ uv sync
 
 2. Запустите тесты:
 ```bash
-uv run coverage run -m unittest discover
+uv run coverage run --branch -m unittest discover
 uv run coverage report -m
 ```
 ```bash
