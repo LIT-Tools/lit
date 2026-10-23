@@ -40,7 +40,7 @@ class TestInitConfig(unittest.TestCase):
             "test@example.com",  # User email
             "",  # Editor
             "jirauser",  # Jira login
-            "jirauser",  # Jira URL
+            "https://jira.test.com",  # Jira URL
             "30",  # Jira days
             "https://gitlab.test.com",  # GitLab URL
             "gitlab@example.com",  # GitLab email
@@ -68,7 +68,9 @@ class TestInitConfig(unittest.TestCase):
         self.assertEqual(config.get("user", "email"), "test@example.com")
 
         # Проверяем секцию [jira]
+        self.assertEqual(config.get("jira", "login"), "jirauser")
         self.assertEqual(config.get("jira", "pass"), "jirapass")
+        self.assertEqual(config.get("jira", "url"), "https://jira.test.com")
         self.assertEqual(config.get("jira", "days"), "30")
 
         # Проверяем секцию [gitlab]
@@ -136,16 +138,11 @@ class TestInitConfig(unittest.TestCase):
         # Используем email, который даст логин
         answers = {
             "User email:": "user@example.com",
-            # Пустой ответ для логина - пользователь нажал Enter (принял дефолт)
-            "User login:": None,  # Используем None как индикатор принятия дефолта
             "Jira login:": "jirauser",
-            "Jira email:": "jira@example.com",
-            "Jira URL:": "jirauser",
+            "Jira URL:": "https://jira.test.com",
             "Days to sync:": "30",
-            "GitLab login:": "gitlabuser",
             "GitLab URL:": "https://gitlab.test.com",
             "GitLab email:": "gitlab@example.com",
-            "Days to sync:": "30"
         }
 
         # Функция-обёртка для questionary.text с учетом default
@@ -178,6 +175,76 @@ class TestInitConfig(unittest.TestCase):
 
         # Проверяем что сообщение было выведено
         mock_print.assert_called_with("\n✅ Конфигурация сохранена в .litconfig")
+
+    @patch("builtins.print")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("lit.init.Path.exists", return_value=False)
+    @patch("lit.init.questionary.password")
+    @patch("lit.init.questionary.text")
+    def test_init_zebrains_defaults(self, mock_text, mock_password, mock_exists, mock_file_open, mock_print):
+        """Для zebrains-домена URL по умолчанию берутся из dev-fallback."""
+        answers = {
+            "User email:": "user@zebrains.team",
+            "Jira login:": "jirauser",
+            "Jira URL:": None,
+            "Days to sync:": "30",
+            "GitLab URL:": None,
+            "GitLab email:": "user@zebrains.team",
+        }
+
+        def text_side_effect(prompt, **kwargs):
+            answer = answers.get(prompt)
+            if answer is None:
+                answer = kwargs.get("default", "")
+            return Mock(ask=lambda: answer)
+
+        mock_text.side_effect = text_side_effect
+        mock_password.side_effect = lambda prompt, **kwargs: Mock(ask=lambda: "secret")
+
+        self.module.init_config()
+
+        handle = mock_file_open()
+        written = "".join(call.args[0] for call in handle.write.call_args_list)
+        config = configparser.RawConfigParser()
+        config.read_string(written)
+
+        self.assertEqual(config.get("jira", "url"), "https://jira.itech-group.ru")
+        self.assertEqual(config.get("gitlab", "url"), "https://gitlab.zebrains.team")
+
+    @patch("builtins.print")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("lit.init.Path.exists", return_value=False)
+    @patch("lit.init.questionary.password")
+    @patch("lit.init.questionary.text")
+    def test_init_non_zebrains_defaults(self, mock_text, mock_password, mock_exists, mock_file_open, mock_print):
+        """Для не-zebrains домена URL по умолчанию пустые — пользователь вводит вручную."""
+        answers = {
+            "User email:": "user@gmail.com",
+            "Jira login:": "jirauser",
+            "Jira URL:": None,
+            "Days to sync:": "30",
+            "GitLab URL:": None,
+            "GitLab email:": "user@gmail.com",
+        }
+
+        def text_side_effect(prompt, **kwargs):
+            answer = answers.get(prompt)
+            if answer is None:
+                answer = kwargs.get("default", "")
+            return Mock(ask=lambda: answer)
+
+        mock_text.side_effect = text_side_effect
+        mock_password.side_effect = lambda prompt, **kwargs: Mock(ask=lambda: "secret")
+
+        self.module.init_config()
+
+        handle = mock_file_open()
+        written = "".join(call.args[0] for call in handle.write.call_args_list)
+        config = configparser.RawConfigParser()
+        config.read_string(written)
+
+        self.assertEqual(config.get("jira", "url"), "")
+        self.assertEqual(config.get("gitlab", "url"), "")
 
 
 if __name__ == '__main__':

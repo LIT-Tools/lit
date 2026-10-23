@@ -96,13 +96,13 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
             self.create_response([
                 {
                     'author_email': 'other@example.com',
-                    'committer_email': 'test_user@example.com',
-                    'message': 'TEST-456 Valid commit'
+                    'committer_email': 'other@example.com',
+                    'message': 'TEST-999 Wrong author'
                 },
                 {
                     'author_email': 'test_user@example.com',
-                    'committer_email': 'other@example.com',
-                    'message': 'Merge branch TEST-789'
+                    'committer_email': 'test_user@example.com',
+                    'message': 'TEST-456 Valid commit'
                 }
             ]),
             self.create_response([])
@@ -114,50 +114,15 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
 
     def test_error_handling(self):
         """Тест обработки ошибок API"""
-        # Импортируем requests
         import requests
 
-        # Оригинальный requests.get
-        original_get = lit.integrations.gitlab.requests.get
+        self.mock_requests.get.side_effect = requests.exceptions.RequestException("HTTP Error 403")
 
-        # Счетчик вызовов
-        call_count = 0
-
-        # Функция-враппер для перехвата вызовов requests.get
-        def patched_get(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
-
-            # Первый вызов - для /api/v4/user - успешный
-            if call_count == 1:
-                mock_resp = MagicMock()
-                mock_resp.json.return_value = {'username': 'test_user@example.com'}
-                mock_resp.status_code = 200
-                return mock_resp
-            # Второй вызов - для /api/v4/users/{username}/projects - с ошибкой
-            else:
-                # Восстанавливаем оригинальную функцию
-                lit.integrations.gitlab.requests.get = original_get
-                # Сохраняем пустой результат
-                lit.integrations.gitlab.save_commits({})
-                # Эмулируем обработку ошибки
-                raise requests.exceptions.RequestException("HTTP Error 403")
-
-        # Подменяем функцию requests.get нашей функцией
-        lit.integrations.gitlab.requests.get = patched_get
-
-        try:
-            # Вызываем функцию
+        with self.assertRaises(requests.exceptions.RequestException):
             lit.integrations.gitlab.load_commits_from_gitlab()
-        except Exception as e:
-            # Выводим исключение для диагностики
-            print(f"Перехваченное исключение: {e}")
 
-        # Проверяем, что был вызван save_commits с пустым словарем
-        self.mock_save_commits.assert_called_once_with({})
-
-        # Восстанавливаем оригинальную функцию
-        lit.integrations.gitlab.requests.get = original_get
+        # При ошибке загрузки проектов сохранять нечего
+        self.mock_save_commits.assert_not_called()
 
     def test_message_parsing(self):
         """Тест парсинга сообщений коммитов"""
