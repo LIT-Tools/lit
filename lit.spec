@@ -9,8 +9,8 @@ datas = collect_data_files('lit')
 datas.append(('pyproject.toml', '.'))
 
 a = Analysis(
-    ['lit.py'],  # Путь к главному файлу
-    pathex=[],
+    ['src/lit/__main__.py'],  # Новый путь к главному файлу
+    pathex=['src'],
     binaries=[],
     datas=datas,  # Передаём собранные данные
     hiddenimports=[],  # Скрытые зависимости

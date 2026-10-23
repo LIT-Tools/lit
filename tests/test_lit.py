@@ -31,7 +31,7 @@ class TestWorklogManager(unittest.TestCase):
         def strftime(self, fmt):
             return self._fixed_time.strftime(fmt)
 
-    @patch('lit.datetime')
+    @patch('lit.core.worklog_manager.datetime')
     @patch('builtins.open', new_callable=mock_open)
     def test_two_entries_success(self, mock_file, mock_datetime):
         mock_datetime.side_effect = lambda *args, **kw: self.MockedDateTime(*args, **kw)
@@ -61,9 +61,9 @@ class TestWorklogManager(unittest.TestCase):
 
     @patch('lit.add_worklog')  # Добавляем мок для add_worklog
     @patch('lit.jira_connect')  # Добавляем мок для jira_connect
-    @patch('lit.PromptSession')
+    @patch('lit.core.worklog_manager.PromptSession')
     @patch('builtins.print')
-    @patch('lit.datetime')
+    @patch('lit.core.worklog_manager.datetime')
     @patch('builtins.open', new_callable=mock_open)
     def test_push_command(self, mock_file, mock_datetime, mock_print, mock_prompt_session, mock_jira_connect, mock_add_worklog): # mock_add_worklog
         # Настройка моков
@@ -76,7 +76,7 @@ class TestWorklogManager(unittest.TestCase):
         mock_jira = mock_jira_connect.return_value
 
         # Мокируем успешный вызов add_worklog
-        mock_add_worklog.return_value = ('73546546', None)
+        mock_add_worklog.return_value = '73546546'
 
         # Добавляем запись
         self.manager.add_entry(['TASK-123', '2', 'Тестовая запись'])
@@ -118,9 +118,9 @@ class TestWorklogManager(unittest.TestCase):
         mock_print.assert_any_call("Записей успешно отправлено: 1")
         mock_print.assert_any_call("Записей неотправленных записей: 0")
 
-    @patch('lit.PromptSession')
+    @patch('lit.core.worklog_manager.PromptSession')
     @patch('builtins.print')
-    @patch('lit.datetime')
+    @patch('lit.core.worklog_manager.datetime')
     @patch('builtins.open', new_callable=mock_open)
     def test_push_command_cancel(self, mock_file, mock_datetime, mock_print, mock_prompt_session):
         # Настройка моков
@@ -153,7 +153,7 @@ class TestWorklogManager(unittest.TestCase):
         mock_print.assert_any_call("   [14:30 - 16:30] TASK-123 2h `Тестовая запись`")
         mock_print.assert_any_call("Отмена отправки.")
 
-    @patch('lit.datetime')
+    @patch('lit.core.worklog_manager.datetime')
     @patch('builtins.open', new_callable=mock_open)
     def test_cli_add_command(self, mock_file, mock_datetime):
         # Настройка фиктивного времени
@@ -325,6 +325,30 @@ class TestVersionCommand(unittest.TestCase):
             self.assertEqual(fake_out.getvalue(), expected_output)
 
 
+class TestGetVersion(unittest.TestCase):
+    def test_returns_package_version(self):
+        """В установленном пакете версия берётся из метаданных, а не 0.0.0-dev."""
+        import lit
+
+        self.assertRegex(lit.get_version(), r"^\d+\.\d+\.\d+")
+
+    def test_frozen_fallback_reads_pyproject(self):
+        """В onefile-сборке PyInstaller версия читается из _MEIPASS/pyproject.toml."""
+        import tempfile
+        from importlib.metadata import PackageNotFoundError
+        from pathlib import Path
+        import lit
+
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "pyproject.toml").write_text(
+                '[project]\nname = "lit"\nversion = "9.9.9"\n',
+                encoding="utf-8",
+            )
+            with patch.object(lit, "package_version", side_effect=PackageNotFoundError), \
+                 patch.object(lit.sys, "_MEIPASS", tmp, create=True):
+                self.assertEqual(lit.get_version(), "9.9.9")
+
+
 class TestInteractiveVersion(unittest.TestCase):
     @patch('lit.patch_stdout', new=lambda: contextlib.nullcontext())
     @patch('lit.PromptSession')
@@ -490,6 +514,68 @@ class TestValidation(unittest.TestCase):
                 )
 
 
+    def test_add_entry_invalid_date(self):
+        manager = WorklogManager()
+        manager.entries = []
+        invalid_dates = ["31.02.2025", "32.01.2025", "abc", "01/01/2025"]
+        for bad_date in invalid_dates:
+            with self.subTest(date=bad_date):
+                manager.entries = []
+                args = {"code":"TASK-123","hours":"4","message":"test","date":bad_date,"time":"10:00"}
+                with patch("lit.TASKS", {"TASK-123":"Test"}), patch("builtins.print") as mock_print, patch.object(manager,"_save") as mock_save:
+                    manager.add_entry(args)
+                output = " ".join(str(c) for c in mock_print.call_args_list)
+                self.assertIn("Неверная дата", output)
+                self.assertIn(bad_date, output)
+                mock_save.assert_not_called()
+                self.assertEqual(manager.entries, [])
+
+class TestAddArgumentHint(unittest.TestCase):
+    def setUp(self):
+        self.manager = WorklogManager()
+        self.manager.entries = []
+
+    def test_unquoted_message_shows_quotes_hint(self):
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            self.manager.add_entry(['TASK-1', '8', 'текст', 'с', 'пробелами'])
+
+        output = stderr.getvalue()
+        self.assertIn('unrecognized arguments: с пробелами', output)
+        self.assertIn('lit add TASK-1 8 "текст с пробелами"', output)
+        self.assertNotIn('lit add TASK-1 1 "', output)
+        self.assertEqual(self.manager.entries, [])
+
+    def test_cli_unquoted_message_shows_quotes_hint(self):
+        from lit import create_argument_parser
+
+        parser = create_argument_parser()
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as cm:
+                parser.parse_args(
+                    ['add', 'TASK-1', '8', 'текст', 'с', 'пробелами']
+                )
+
+        self.assertEqual(cm.exception.code, 2)
+        self.assertIn(
+            'lit add TASK-1 8 "текст с пробелами"',
+            stderr.getvalue(),
+        )
+
+    def test_quoted_message_is_added_without_hint(self):
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr), \
+             patch.object(self.manager, '_save'), \
+             patch('builtins.print'):
+            self.manager.add_entry(
+                ['TASK-123', '8', 'текст с пробелами', '-d', '01.01.2026', '-t', '10:00']
+            )
+
+        self.assertEqual(stderr.getvalue(), '')
+        self.assertEqual(len(self.manager.entries), 1)
+
+
 class TestPullEntries(unittest.TestCase):
     def setUp(self):
         self.manager = WorklogManager()
@@ -575,7 +661,7 @@ class TestEditEntries(unittest.TestCase):
         self.mock_load = patch.object(WorklogManager, '_load').start()
 
         # Мокируем глобальные переменные
-        self.patcher = patch.multiple('lit',
+        self.patcher = patch.multiple('lit.core.worklog_manager',
                                       LIT_STORE='/fake/path/.litstore',
                                       CUSTOM_EDITOR=''
                                       )
@@ -596,7 +682,6 @@ class TestEditEntries(unittest.TestCase):
             encoding='utf-8'
         )
         self.mock_load.assert_called_once()
-        self.mock_print.assert_any_call(['notepad', '/fake/path/.litstore'])
         self.mock_print.assert_any_call("✓ Изменения применены")
 
     @patch.dict(os.environ, {'EDITOR': 'nano'}, clear=True)

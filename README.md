@@ -1,6 +1,10 @@
 # LIT: Logging Integrated Timekeeper
 
-<img src="https://img.shields.io/badge/python-3.9+-blue?logo=python" alt="Python Version"> <img src="https://img.shields.io/badge/license-MIT-green" alt="License"> <img src="https://img.shields.io/badge/coverage-83%25-green" alt="Coverage">
+[![CI](https://github.com/LIT-Tools/lit/actions/workflows/ci.yml/badge.svg)](https://github.com/LIT-Tools/lit/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.9+-blue?logo=python)]()
+[![License](https://img.shields.io/badge/license-MIT-2E6F40)]()
+[![Coverage](https://img.shields.io/badge/coverage-70%25-2E6F40)]()
+[![CRAP](https://img.shields.io/badge/CRAP-9.0-2E6F40)]()
 
 Консольная утилита для удобного управления рабочими логами с интеграцией Jira и GitLab
 
@@ -57,11 +61,14 @@ curl -LO https://github.com/LIT-Tools/lit/releases/latest/download/lit-macos.tar
 ```bash
 irm https://github.com/LIT-Tools/lit/releases/latest/download/lit-windows.zip -OutFile lit-windows.zip
 Expand-Archive -Path lit-windows.zip -DestinationPath . -Force
-$installPath = "$env:USERPROFILE\lit"
-New-Item -Path $installPath -ItemType Directory -Force
-Move-Item -Path .\lit.exe -Destination $installPath -Force
-$env:PATH += ";$installPath"
-[Environment]::SetEnvironmentVariable("PATH", $env:PATH, "User")
+$p = "$HOME\lit"
+New-Item -Path $p -ItemType Directory -Force | Out-Null
+Move-Item -Path .\lit.exe -Destination $p -Force
+$curPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+if ($curPath -notmatch "([\W;]|^)$([regex]::Escape($p))([\W;]|$)") {
+    $env:PATH += ";$p"
+    [Environment]::SetEnvironmentVariable("PATH", "$curPath$((';','')[$curPath -eq ''])$p", 'User')
+}
 rm lit-windows.zip
 ```
 
@@ -111,14 +118,19 @@ lit push
 ```bash
 lit edit
 ```
-Открывает файл `.litstore` в системном редакторе для ручного редактирования.
+Открывает файл `.litstore` в редакторе: сначала берётся `editor` из секции
+`[user]`, затем `$EDITOR` / `$VISUAL`, иначе `vim` (Linux/macOS) или
+`notepad` (Windows).
 
 ### Синхронизация данных
 ```bash
 lit pull [--jira] [--gitlab]
 ```
 - `-j --jira` - загрузить задачи из Jira
-- `-g --gitlab` - загрузить коммиты из GitLab
+- `-g --gitlab` - загрузить коммиты из GitLab (по всем веткам)
+
+Без флагов загружаются оба источника. Задачи сохраняются в `~/.lit/tasks.json`
+(используются для автодополнения), коммиты — в `~/.lit/commits.json`.
 
 ### Вспомогательные команды
 `-v --version` - версия приложения  
@@ -131,23 +143,35 @@ lit pull [--jira] [--gitlab]
 Пример `~/.lit/.litconfig`:
 ```ini
 [user]
-login = user
 email = user@domain.com
+editor = nano # C:\Program Files\Notepad++\notepad++.exe
 
 [jira]
-login = user
+# Jira Cloud: basic auth = email + API token
 email = user@domain.com
-pass = password
-url = https://jira.com
+login = user@domain.com
+pass = ваш_api_token
+url = https://your-domain.atlassian.net
 days = 30
+api_version = auto
 
 [gitlab]
-login = user
 email = user@domain.com
 url = https://gitlab.com
 token = ваш_личный_токен
 days = 30
 ```
+
+Для Jira Cloud укажите `email` и API token в `pass`. Токен создаётся на
+[странице управления токенами Atlassian](https://id.atlassian.com/manage-profile/security/api-tokens).
+Для Jira Data Center используйте `login` и `pass` (пароль или personal access token);
+`email` в этом случае нужен только как fallback для `login`.
+
+`api_version` управляет версией REST API:
+- `auto` (по умолчанию) — Cloud → v3, Data Center → v2;
+- `2` или `3` — принудительно выбрать версию.
+
+`days` в секциях `[jira]` и `[gitlab]` задаёт глубину загрузки при `lit pull`.
 
 ## 📂 Формат хранения данных
 
@@ -156,6 +180,8 @@ days = 30
 12.02.2025 [10:00 - 14:00] TASK-1752 4h `Убрал из меню ссылку О компании`
 25.12.2023 [14:30 - 15:00] TASK-15 30m `Исправление крэша при загрузке`
 ```
+Строки, начинающиеся с `#`, считаются отключёнными: они видны в `lit status`,
+но не отправляются в Jira.
 
 Отправленные логи сохраняются в `.lithistory` с ID ворклога:
 ```
@@ -166,129 +192,116 @@ days = 30
 
 ### 🍏 Mac
 ```bash
-# Установка Poetry (рекомендуется через Homebrew)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew install poetry
-
-#  Для управления версиями Python (опционально, но рекомендуется)
-brew install pyenv
-echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.zshrc
-echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.zshrc
-echo 'eval "$(pyenv init -)"' >> ~/.zshrc
-source ~/.zshrc
-
-# Установка нужной версии Python (пример для 3.12)
-pyenv install 3.12
-pyenv global 3.12
+# uv (один раз)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.local/bin/env      # zsh/bash; либо просто откройте новый терминал
 
 git clone https://github.com/LIT-Tools/lit.git
 cd lit
+uv sync
 
-poetry install
-source .venv/bin/activate  # Для bash/zsh
+source .venv/bin/activate
+lit --help
 ```
 
 ### 🐧 Linux
 
-1. Установите системные зависимости
+1. Системные зависимости — только `git` и `curl`
+   (Python, pip, venv и компилятор `uv` не требуются — он скачивает готовый CPython)
 ```bash
-# Для Debian/Ubuntu:
-sudo apt-get update && sudo apt-get install -y \
-    python3 python3-pip python3-venv git curl \
-    build-essential libssl-dev zlib1g-dev
+# Debian/Ubuntu:
+sudo apt-get update && sudo apt-get install -y git curl
 
-# Для Fedora/RHEL:
-sudo dnf install -y python3 python3-pip python3-virtualenv git curl \
-    gcc openssl-devel bzip2-devel libffi-devel zlib-devel
+# Fedora/RHEL:
+sudo dnf install -y git curl
 ```
 
-2. Установите Poetry
+2. Установка uv и проекта
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
+curl -LsSf https://astral.sh/uv/install.sh | sh
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 source ~/.bashrc
-```
 
-3. Установите pyenv (опционально, для управления версиями Python)
-```bash
-curl https://pyenv.run | bash
-
-# Добавьте в ~/.bashrc:
-echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
-echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-source ~/.bashrc
-
-# Установите нужную версию Python (пример):
-pyenv install 3.12
-pyenv global 3.12
-```
-
-4. Клонируйте репозиторий и установите зависимости
-```bash
 git clone https://github.com/LIT-Tools/lit.git
 cd lit
-poetry install
-poetry shell  # или source .venv/bin/activate
+uv sync
+source .venv/bin/activate
+lit --help
 ```
 
 ### 🪟 Windows
 
 PowerShell:
-```bash
+```powershell
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 \* *В PS может потребоваться разрешение на запуск локальных скриптов*
 
-```bash
+```powershell
+# uv (один раз)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
 git clone https://github.com/LIT-Tools/lit.git
 cd lit
-poetry install
-.\.venv\Scripts\activate
-# or
-poetry env activate 
+uv sync
+uv run lit --help
 ```
 
 ## 🔨 Сборка
 Windows / Linux / macOS
 ```bash
-poetry run pyinstaller lit.spec
+uv run pyinstaller lit.spec
+```
+Готовый бинарник — `dist/lit` (`dist/lit.exe` на Windows). То же самое через Makefile:
+
+```bash
+make build
 ```
 
 ## 🛠 Тестирование
 
-1. Установите dev-зависимости:
 ```bash
-poetry install --with dev
+uv sync     # один раз — dev-зависимости
+make test   # тесты + покрытие + CRAP + HTML-отчёт
 ```
 
-2. Запустите тесты:
+`make test` прогоняет `unittest`, печатает покрытие и таблицу CRAP,
+собирает HTML-отчёт в `htmlcov/index.html` и удаляет промежуточные
+`cc.json` / `coverage.json` / `.coverage`.
+
+Очистить всё сгенерированное:
 ```bash
-coverage run -m unittest discover
-coverage report -m
+make clean
 ```
 
-3. Откройте отчёт:
+<details>
+<summary>Что именно запускается внутри <code>make test</code></summary>
 
-Windows
 ```bash
-coverage html; Start-Process "htmlcov/index.html"
+uv run coverage run --branch -m unittest discover
+uv run coverage report -m
+uv run coverage json -o coverage.json
+uv run radon cc . -j -O cc.json
+uv run python calc_crap.py
+uv run coverage html
 ```
-Linux / Mac
-```bash
-coverage html && open htmlcov/index.html
-```
+
+`calc_crap.py` поддерживает `--format md|json`, `--no-color` и
+`--threshold N` (exit 1 при превышении порога — удобно для CI).
+</details>
 
 ## 🔮 Планы развития
 
 - [ ] Исправить подсказки ключей для команды `add`, убрать ложные срабатывания
+- [ ] Исправить баг, что после команды `pull` нужно перезапускать интерактивный режим  
 - [x] Настроить сборку бинарника
 - [x] Опубликовать в интернете для установки
 - [x] Настроить версионирование
+- [x] Перейти с poetry на uv
 - [ ] Добавить проверку свежей версии и обновление
 - [ ] Рефакторинг дублирующего кода
-- [ ] Рефакторинг архитектуры под классический питонячий формат 
-- [x] Повысить покрытие тестами 80+%
+- [x] Рефакторинг архитектуры под классический питонячий формат
+- [ ] Повысить покрытие тестами до 80%+ (сейчас ~70%)
 - [ ] Рефакторинг тестов
 - [x] Понизить версию питона 
 - [ ] Добавить мульти профили что бы подключаться к разным контурам
@@ -308,7 +321,7 @@ coverage html && open htmlcov/index.html
 ## ⚠️ Особенности работы валидации
 
 - Время начала позже 19:00 или раньше 5:00 вызывает предупреждение
-- При указании несуществующей задачи в автодополнении, появится подтверждение
+- При указании несуществующей задачи в автодополнении появится предупреждение
 - Поддержка сложных временных форматов (1d = 8h, 1h 15m и т.д.)
 
 ## ❓ Частые вопросы

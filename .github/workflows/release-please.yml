@@ -1,146 +1,90 @@
-name: Release Automation
+name: Release
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   test:
-#    if: "!contains(github.event.head_commit.message, 'release-please--branches--master')"
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
-    steps:
-      - uses: actions/checkout@v4
+    uses: ./.github/workflows/ci.yml
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-
-      - name: Install Dependencies
-        run: poetry install --with dev
-
-      - name: Run Tests
-        run: poetry run coverage run -m unittest discover
-
-      - name: Coverage Report
-        run: poetry run coverage report -m
-
-  release-prepare:
+  release-please:
     needs: test
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.release.outputs.upload_url }}
+      release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Release Please
+      - name: Run release-please
         id: release
-        uses: google-github-actions/release-please-action@v3
+        uses: googleapis/release-please-action@v5
         with:
           release-type: python
-          package-name: lit
-          version-file: pyproject.toml
-          manifest-file: pyproject.toml
-          changelog-types: '[{"type":"feat","section":"Features"},{"type":"fix","section":"Bug Fixes"}]'
 
   build:
-    if: "contains(github.event.head_commit.message, 'release-please--branches--master')"
-    needs: release-prepare
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
             dist_dir: windows
-            archive_ext: zip
             binary_name: lit.exe
-            spec_args: lit.spec
-            content_type: application/zip
+            asset_name: lit-windows.zip
           - os: ubuntu-latest
             dist_dir: linux
-            archive_ext: tar.gz
             binary_name: lit
-            spec_args: lit.spec
-            content_type: application/gzip
+            asset_name: lit-linux.tar.gz
           - os: macos-latest
             dist_dir: macos
-            archive_ext: tar.gz
             binary_name: lit
-            spec_args: lit.spec
-            content_type: application/gzip
-    runs-on: ${{ matrix.os }}
+            asset_name: lit-macos.tar.gz
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v7
         with:
-          python-version: '3.9'
+          python-version: "3.12"
 
-      - name: Install System Dependencies
-        if: matrix.os == 'windows-latest'
-        run: choco install 7zip
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          enable-cache: true
 
-      - name: Install Poetry (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
-          echo "$env:APPDATA\Python\Scripts" >> $env:GITHUB_PATH
-
-      - name: Install Poetry (Linux/macOS)
-        if: matrix.os != 'windows-latest'
-        uses: snok/install-poetry@v1
-
-      - name: Install Dependencies
-        run: poetry install
+      - name: Install dependencies
+        run: uv sync --locked
 
       - name: Build binary with PyInstaller
-        run: poetry run pyinstaller ${{ matrix.spec_args }} --distpath dist/${{ matrix.dist_dir }}
+        run: uv run pyinstaller --noconfirm lit.spec --distpath dist/${{ matrix.dist_dir }}
 
-      - name: Move binary (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          Move-Item -Path "dist\windows\lit.exe" -Destination .
-          .\lit.exe --version
-        shell: pwsh
+      - name: Verify binary (Windows)
+        if: runner.os == 'Windows'
+        run: .\dist\windows\lit.exe --version
 
-      - name: Move binary (Linux/macOS)
-        if: matrix.os != 'windows-latest'
-        run: |
-          mv "dist/${{ matrix.dist_dir }}/${{ matrix.binary_name }}" .
-          chmod +x ./lit
-          ./lit --version
+      - name: Verify binary (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: ./dist/${{ matrix.dist_dir }}/${{ matrix.binary_name }} --version
 
       - name: Create archive (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          $ASSET_NAME = "lit-${{ matrix.dist_dir }}.${{ matrix.archive_ext }}"
-          7z a -tzip $ASSET_NAME ${{ matrix.binary_name }}
-          Write-Output "ASSET_NAME=$ASSET_NAME" | Out-File -FilePath $env:GITHUB_ENV -Append
-          Write-Output "CONTENT_TYPE=${{ matrix.content_type }}" | Out-File -FilePath $env:GITHUB_ENV -Append
-        shell: pwsh
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path "dist\windows\lit.exe" -DestinationPath "${{ matrix.asset_name }}" -Force
 
       - name: Create archive (Linux/macOS)
-        if: matrix.os != 'windows-latest'
-        run: |
-          ASSET_NAME="lit-${{ matrix.dist_dir }}.${{ matrix.archive_ext }}"
-          tar -czf $ASSET_NAME ${{ matrix.binary_name }}
-          echo "ASSET_NAME=$ASSET_NAME" >> $GITHUB_ENV
-          echo "CONTENT_TYPE=${{ matrix.content_type }}" >> $GITHUB_ENV
+        if: runner.os != 'Windows'
+        run: tar -czf "${{ matrix.asset_name }}" -C "dist/${{ matrix.dist_dir }}" "${{ matrix.binary_name }}"
 
       - name: Upload release asset
-        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release-prepare.outputs.upload_url }}
-          asset_path: ./${{ env.ASSET_NAME }}
-          asset_name: ${{ env.ASSET_NAME }}
-          asset_content_type: ${{ env.CONTENT_TYPE }}
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ needs.release-please.outputs.tag_name }}" "${{ matrix.asset_name }}" --clobber

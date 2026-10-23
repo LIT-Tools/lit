@@ -4,3 +4,7 @@
 /build/
 /dist/
 .coverage
+.DS_Store
+__pycache__/
+cc.json
+coverage.json

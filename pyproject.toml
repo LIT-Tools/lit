@@ -3,29 +3,35 @@ name = "lit"
 version = "1.1.0"
 description = "Tool for quickly filling work logs in Jira via CLI"
 authors = [
-    {name = "LEXX",email = "s_kushnarev@rambler.ru"}
+    { name = "LEXX", email = "s_kushnarev@rambler.ru" }
 ]
-license = {text = "MIT"}
+license = "MIT"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.14"
 dependencies = [
-    "prompt-toolkit (>=3.0.50,<4.0.0)",
-    "jira (>=3.8.0,<4.0.0)",
-    "tzlocal (>=5.3,<6.0)",
-    "beautifulsoup4 (>=4.13.3,<5.0.0)",
-    "questionary (>=2.1.0,<3.0.0)"
+    "prompt-toolkit>=3.0.50,<4.0.0",
+    "jira>=3.8.0,<4.0.0",
+    "tzlocal>=5.3,<6.0",
+    "beautifulsoup4>=4.13.3,<5.0.0",
+    "questionary>=2.1.0,<3.0.0",
 ]
 
-[tool.poetry.group.dev.dependencies]
-coverage = "^7.6.12"
-pyinstaller = "6.12.0"
+[project.scripts]
+lit = "lit:cli"
+
+[dependency-groups]
+dev = [
+    "coverage>=7.6.12,<8.0.0",
+    "pyinstaller==6.12.0",
+    "radon>=6.0.1",
+]
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.poetry.dependencies]
-python = ">=3.12,<3.14"  # Ограничиваем верхнюю границу
+[tool.hatch.build.targets.wheel]
+packages = ["src/lit"]
 
-[tool.poetry.scripts]
-lit = "lit:main"
+[tool.coverage.run]
+source = ["lit"]
