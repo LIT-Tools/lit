@@ -2,8 +2,8 @@
 
 [![Python](https://img.shields.io/badge/python-3.9+-blue?logo=python)]()
 [![License](https://img.shields.io/badge/license-MIT-2E6F40)]()
-[![Coverage](https://img.shields.io/badge/coverage-83%25-2E6F40)]()
-[![CRAP](https://img.shields.io/badge/CRAP-8.5-2E6F40)]()
+[![Coverage](https://img.shields.io/badge/coverage-70%25-2E6F40)]()
+[![CRAP](https://img.shields.io/badge/CRAP-9.0-2E6F40)]()
 
 Консольная утилита для удобного управления рабочими логами с интеграцией Jira и GitLab
 
@@ -117,7 +117,9 @@ lit push
 ```bash
 lit edit
 ```
-Открывает файл `.litstore` в системном редакторе для ручного редактирования.
+Открывает файл `.litstore` в редакторе: сначала берётся `editor` из секции
+`[user]`, затем `$EDITOR` / `$VISUAL`, иначе `vim` (Linux/macOS) или
+`notepad` (Windows).
 
 ### Синхронизация данных
 ```bash
@@ -125,6 +127,9 @@ lit pull [--jira] [--gitlab]
 ```
 - `-j --jira` - загрузить задачи из Jira
 - `-g --gitlab` - загрузить коммиты из GitLab
+
+Без флагов загружаются оба источника. Задачи сохраняются в `~/.lit/tasks.json`
+(используются для автодополнения), коммиты — в `~/.lit/commits.json`.
 
 ### Вспомогательные команды
 `-v --version` - версия приложения  
@@ -153,6 +158,8 @@ token = ваш_личный_токен
 days = 30
 ```
 
+`days` в секциях `[jira]` и `[gitlab]` задаёт глубину загрузки при `lit pull`.
+
 ## 📂 Формат хранения данных
 
 Подготовленные записи хранятся в текстовом файле `.litstore`:
@@ -160,6 +167,8 @@ days = 30
 12.02.2025 [10:00 - 14:00] TASK-1752 4h `Убрал из меню ссылку О компании`
 25.12.2023 [14:30 - 15:00] TASK-15 30m `Исправление крэша при загрузке`
 ```
+Строки, начинающиеся с `#`, считаются отключёнными: они видны в `lit status`,
+но не отправляются в Jira.
 
 Отправленные логи сохраняются в `.lithistory` с ID ворклога:
 ```
@@ -179,7 +188,7 @@ cd lit
 uv sync
 
 source .venv/bin/activate
-python lit.py --help
+lit --help
 ```
 
 ### 🐧 Linux
@@ -204,30 +213,36 @@ git clone https://github.com/LIT-Tools/lit.git
 cd lit
 uv sync
 source .venv/bin/activate
-python lit.py --help
+lit --help
 ```
 
 ### 🪟 Windows
 
 PowerShell:
-```bash
+```powershell
 Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 \* *В PS может потребоваться разрешение на запуск локальных скриптов*
 
-```bash
+```powershell
+# uv (один раз)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
 git clone https://github.com/LIT-Tools/lit.git
 cd lit
-poetry install
-.\.venv\Scripts\activate
-# or
-poetry env activate 
+uv sync
+uv run lit --help
 ```
 
 ## 🔨 Сборка
 Windows / Linux / macOS
 ```bash
 uv run pyinstaller lit.spec
+```
+Готовый бинарник — `dist/lit` (`dist/lit.exe` на Windows). То же самое через Makefile:
+
+```bash
+make build
 ```
 
 ## 🛠 Тестирование
@@ -243,20 +258,22 @@ uv run coverage run --branch -m unittest discover
 uv run coverage report -m
 ```
 ```bash
-coverage json -o coverage.json    
-radon cc . -j -O cc.json   
-python calc_crap.py
+uv run coverage json -o coverage.json
+uv run radon cc . -j -O cc.json
+uv run python calc_crap.py
 ```
+`calc_crap.py` поддерживает `--format md|json`, `--no-color` и
+`--threshold N` (exit 1 при превышении порога — удобно для CI).
 
 3. Откройте отчёт:
 
 Windows
 ```bash
-coverage html; Start-Process "htmlcov/index.html"
+uv run coverage html; Start-Process "htmlcov/index.html"
 ```
 Linux / Mac
 ```bash
-coverage html && open htmlcov/index.html
+uv run coverage html && open htmlcov/index.html
 ```
 
 ## 🔮 Планы развития
@@ -266,10 +283,11 @@ coverage html && open htmlcov/index.html
 - [x] Настроить сборку бинарника
 - [x] Опубликовать в интернете для установки
 - [x] Настроить версионирование
+- [x] Перейти с poetry на uv
 - [ ] Добавить проверку свежей версии и обновление
 - [ ] Рефакторинг дублирующего кода
-- [ ] Рефакторинг архитектуры под классический питонячий формат 
-- [x] Повысить покрытие тестами 80+%
+- [x] Рефакторинг архитектуры под классический питонячий формат
+- [ ] Повысить покрытие тестами до 80%+ (сейчас ~70%)
 - [ ] Рефакторинг тестов
 - [x] Понизить версию питона 
 - [ ] Добавить мульти профили что бы подключаться к разным контурам
@@ -289,7 +307,7 @@ coverage html && open htmlcov/index.html
 ## ⚠️ Особенности работы валидации
 
 - Время начала позже 19:00 или раньше 5:00 вызывает предупреждение
-- При указании несуществующей задачи в автодополнении, появится подтверждение
+- При указании несуществующей задачи в автодополнении появится предупреждение
 - Поддержка сложных временных форматов (1d = 8h, 1h 15m и т.д.)
 
 ## ❓ Частые вопросы
