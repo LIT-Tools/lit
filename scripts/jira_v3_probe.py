@@ -26,6 +26,9 @@ from lit.config_manager import get_jira
 
 JQL_ASSIGNEE = "assignee = currentUser() ORDER BY updated DESC"
 JQL_WORKLOG = "worklogAuthor = currentUser() AND worklogDate >= -30d ORDER BY updated DESC"
+JQL_DESCRIPTION = (
+    "assignee = currentUser() AND description is not EMPTY ORDER BY updated DESC"
+)
 
 
 def mask(value: str) -> str:
@@ -122,14 +125,20 @@ def print_client_info(label: str, jira: JIRA, cfg: dict) -> bool:
         return True
 
 
-def search(jira: JIRA, jql: str, limit: int = 5, auth_ok: bool = True) -> list:
+def search(
+    jira: JIRA,
+    jql: str,
+    limit: int = 5,
+    auth_ok: bool = True,
+    fields: str = "key,summary,status,assignee,updated",
+) -> list:
     """Поиск задач и печать краткой информации."""
     print(f"\nJQL: {jql}")
     try:
         issues = jira.search_issues(
             jql,
             maxResults=limit,
-            fields="key,summary,status,assignee,updated",
+            fields=fields,
         )
     except Exception as exc:  # noqa: BLE001
         print("search: FAILED")
@@ -146,12 +155,27 @@ def search(jira: JIRA, jql: str, limit: int = 5, auth_ok: bool = True) -> list:
     return list(issues)
 
 
+def describe_value(label: str, value: Any) -> None:
+    """Печать типа значения и его raw-представления."""
+    print(f"{label} type:", type(value).__name__)
+    raw = getattr(value, "raw", None)
+    if raw is not None and raw is not value:
+        print(f"{label} raw type:", type(raw).__name__)
+        print(f"{label} raw sample:", short(raw))
+    else:
+        print(f"{label} sample:", short(value))
+
+
 def probe_issue_details(jira: JIRA, issue) -> None:
     """Проверить типы description и worklog comment."""
     print(f"\n=== Детали {issue.key} ===")
     description = getattr(issue.fields, "description", None)
-    print("description type:", type(description).__name__)
-    print("description sample:", short(description))
+    describe_value("description", description)
+
+    raw_fields = (issue.raw or {}).get("fields", {})
+    raw_description = raw_fields.get("description")
+    print("raw fields.description type:", type(raw_description).__name__)
+    print("raw fields.description sample:", short(raw_description))
 
     try:
         worklogs = jira.worklogs(issue.key)
@@ -162,9 +186,11 @@ def probe_issue_details(jira: JIRA, issue) -> None:
 
     print("worklogs:", len(worklogs))
     if worklogs:
-        comment = getattr(worklogs[0], "comment", None)
-        print("worklog comment type:", type(comment).__name__)
-        print("worklog comment sample:", short(comment))
+        worklog = worklogs[0]
+        describe_value("worklog comment", getattr(worklog, "comment", None))
+        raw_comment = (worklog.raw or {}).get("comment")
+        print("raw worklog comment type:", type(raw_comment).__name__)
+        print("raw worklog comment sample:", short(raw_comment))
 
 
 def probe_pagination(jira: JIRA, jql: str) -> None:
@@ -284,14 +310,35 @@ def main() -> int:
     auth_ok = print_client_info("Jira v3", jira_v3, cfg)
 
     issues = search(jira_v3, JQL_ASSIGNEE, args.limit, auth_ok=auth_ok)
-    search(jira_v3, JQL_WORKLOG, args.limit, auth_ok=auth_ok)
+    description_issues = search(
+        jira_v3,
+        JQL_DESCRIPTION,
+        args.limit,
+        auth_ok=auth_ok,
+        fields="key,summary,description",
+    )
+    worklog_issues = search(jira_v3, JQL_WORKLOG, args.limit, auth_ok=auth_ok)
 
-    if issues:
-        probe_issue_details(jira_v3, issues[0])
-    elif auth_ok:
-        print("\nНет задач для проверки description/worklog.")
-    else:
-        print("\nПроверка description/worklog пропущена: нет авторизации.")
+    detail_issues = []
+    if description_issues:
+        detail_issues.append(description_issues[0])
+    if worklog_issues:
+        detail_issues.append(worklog_issues[0])
+    if not detail_issues and issues:
+        detail_issues.append(issues[0])
+
+    seen = set()
+    for issue in detail_issues:
+        if issue.key in seen:
+            continue
+        seen.add(issue.key)
+        probe_issue_details(jira_v3, issue)
+
+    if not detail_issues:
+        if auth_ok:
+            print("\nНет задач для проверки description/worklog.")
+        else:
+            print("\nПроверка description/worklog пропущена: нет авторизации.")
 
     probe_pagination(jira_v3, JQL_ASSIGNEE)
 

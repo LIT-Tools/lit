@@ -1,7 +1,7 @@
 # Jira REST API v3: план перехода и чек-лист
 
-> Статус: шаг 1 (spike) запущен. Авторизация Jira вернула `401`
-> (`AUTHENTICATED_FAILED`) — нужен новый API token.
+> Статус: шаг 1 (spike) — read-only часть завершена, авторизация OK.
+> Осталось проверить write-test (ADF vs plain string) на sandbox-задаче.
 > Результаты: [`docs/jira-v3-spike.md`](./docs/jira-v3-spike.md).
 > Базовая точка: `dev` / `1b30085`; 48 тестов, покрытие 72%.
 > Источник истины по командам — [`README.md`](./README.md).
@@ -119,7 +119,7 @@ uv run lit status; echo "exit=$?"
 ## 6. Чек-лист
 
 - [ ] Шаг 0: Baseline
-- [ ] Шаг 1: Spike-прототип Jira v3 — **в работе**: `401`, ждёт новый API token
+- [ ] Шаг 1: Spike-прототип Jira v3 — read-only готов, ждёт sandbox-задачу для write-test
 - [ ] Шаг 2: `exceptions.py` + отказ от `exit()`
 - [ ] Шаг 3: `plain_text_to_adf()`
 - [ ] Шаг 4: `jira_client.py` — единый клиент и выбор версии API
