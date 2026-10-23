@@ -23,6 +23,7 @@ lit = "lit:cli"
 dev = [
     "coverage>=7.6.12,<8.0.0",
     "pyinstaller==6.12.0",
+    "radon>=6.0.1",
 ]
 
 [build-system]

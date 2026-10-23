@@ -8,3 +8,6 @@
 .coverage
 .venv/*.pyc
 __pycache__/
+.coverage
+cc.json
+coverage.json
