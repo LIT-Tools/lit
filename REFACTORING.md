@@ -152,42 +152,14 @@ uv run lit status; echo "exit=$?"
 **Цель**: узнать, как реально ведёт себя Jira Cloud и библиотека `jira`
 с `rest_api_version="3"` на вашем инстансе. **Код в `src/` не трогаем.**
 
-#### 1.1. Скрипт `scripts/jira_v3_probe.py`
+#### 1.1. Временный probe-скрипт
 
-Скрипт одноразовый, но с двумя режимами:
+Для spike использовался одноразовый скрипт: он проверял basic auth,
+`currentUser()`, типы `description`/`comment`, пагинацию Cloud и
+ADF-комментарий. Скрипт не входит в production-код и после завершения
+spike удалён. Результаты сохранены в `docs/jira-v3-spike.md` без секретов.
 
-- **read-only (по умолчанию)** — только чтение:
-  - создаёт клиент v3 с `basic_auth=(login/email, pass)`;
-  - печатает `rest_api_version`, `deploymentType`, `_is_cloud`,
-    `server_info()`, `current_user()` (секреты маскируются);
-  - ищет задачи по JQL:
-    - `assignee = currentUser() ORDER BY updated DESC`;
-    - `worklogAuthor = currentUser() AND worklogDate >= -30d`;
-  - печатает ключ, summary, статус, исполнителя;
-  - печатает тип `description` у первой задачи;
-  - печатает тип `comment` у первого worklog;
-  - проверяет пагинацию: `search_issues(..., startAt=1)` — на Cloud
-    ожидается `JIRAError`;
-  - проверяет `enhanced_search_issues()` на Cloud;
-  - создаёт клиент v2 для сравнения.
-- **`--write-test ISSUE-KEY`** — только по явному указанию безопасной
-  задачи:
-  - добавляет worklog на 1 минуту с ADF-комментарием;
-  - читает его обратно, проверяет тип `comment`;
-  - удаляет worklog;
-  - отдельно пробует plain string на v3 (ожидается `400`);
-  - если string-worklog всё же создался — удаляет.
-
-#### 1.2. Запуск
-
-```bash
-uv run python scripts/jira_v3_probe.py
-uv run python scripts/jira_v3_probe.py --write-test TEST-123
-```
-
-Результат сохранить в `docs/jira-v3-spike.md` **без токена и пароля**.
-
-#### 1.3. Что должно стать известно
+#### 1.2. Что должно стать известно
 
 1. Проходит ли basic auth с текущими `login` / `pass` на Cloud?
 2. `deploymentType` — `Cloud`?
@@ -199,14 +171,12 @@ uv run python scripts/jira_v3_probe.py --write-test TEST-123
 
 #### DoD шага 1
 
-- Скрипт создан и запущен.
+- Временный скрипт запущен, результаты зафиксированы, скрипт удалён.
 - Вывод сохранён в `docs/jira-v3-spike.md` без секретов.
 - Есть ответы на 7 вопросов выше.
 - `src/` и `tests/` не изменены.
-- `git status` показывает только `scripts/jira_v3_probe.py` и
-  `docs/jira-v3-spike.md` (или скрипт не коммитится).
-- **Коммит**: `docs: record jira v3 spike` (опционально; скрипт можно
-  оставить untracked).
+- В `git status` нет диагностических файлов.
+- **Коммит**: `docs: record jira v3 spike`.
 
 ---
 
