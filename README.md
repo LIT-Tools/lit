@@ -1,5 +1,6 @@
 # LIT: Logging Integrated Timekeeper
 
+[![CI](https://github.com/LIT-Tools/lit/actions/workflows/ci.yml/badge.svg)](https://github.com/LIT-Tools/lit/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.9+-blue?logo=python)]()
 [![License](https://img.shields.io/badge/license-MIT-2E6F40)]()
 [![Coverage](https://img.shields.io/badge/coverage-70%25-2E6F40)]()
