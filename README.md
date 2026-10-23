@@ -247,34 +247,35 @@ make build
 
 ## 🛠 Тестирование
 
-1. Установите dev-зависимости:
 ```bash
-uv sync
+uv sync     # один раз — dev-зависимости
+make test   # тесты + покрытие + CRAP + HTML-отчёт
 ```
 
-2. Запустите тесты:
+`make test` прогоняет `unittest`, печатает покрытие и таблицу CRAP,
+собирает HTML-отчёт в `htmlcov/index.html` и удаляет промежуточные
+`cc.json` / `coverage.json` / `.coverage`.
+
+Очистить всё сгенерированное:
+```bash
+make clean
+```
+
+<details>
+<summary>Что именно запускается внутри <code>make test</code></summary>
+
 ```bash
 uv run coverage run --branch -m unittest discover
 uv run coverage report -m
-```
-```bash
 uv run coverage json -o coverage.json
 uv run radon cc . -j -O cc.json
 uv run python calc_crap.py
+uv run coverage html
 ```
+
 `calc_crap.py` поддерживает `--format md|json`, `--no-color` и
 `--threshold N` (exit 1 при превышении порога — удобно для CI).
-
-3. Откройте отчёт:
-
-Windows
-```bash
-uv run coverage html; Start-Process "htmlcov/index.html"
-```
-Linux / Mac
-```bash
-uv run coverage html && open htmlcov/index.html
-```
+</details>
 
 ## 🔮 Планы развития
 
