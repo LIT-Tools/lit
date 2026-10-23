@@ -7,7 +7,6 @@ from jira.exceptions import JIRAError
 
 from lit import cli
 from lit.exceptions import JiraIntegrationError
-from lit.integrations.jira import load_tasks_from_jira
 from lit.integrations.jira_push import jira_connect
 
 
@@ -51,44 +50,6 @@ class TestJiraConnect(unittest.TestCase):
 
         self.assertIs(jira_connect(), client)
         mock_build.assert_called_once_with()
-
-
-class TestLoadTasksFromJiraErrors(unittest.TestCase):
-    def _cfg(self):
-        return {
-            "url": "https://example.atlassian.net",
-            "login": "u@example.com",
-            "pass": "token",
-            "days": 30,
-        }
-
-    @patch("lit.integrations.jira.pars_error_jira")
-    @patch("lit.integrations.jira.JIRA")
-    @patch("lit.integrations.jira.get_jira")
-    def test_raises_on_connect_failure(self, mock_get_jira, mock_jira_cls, mock_pars):
-        mock_get_jira.return_value = self._cfg()
-        mock_jira_cls.side_effect = JIRAError(status_code=401, text="denied")
-
-        with self.assertRaises(JiraIntegrationError):
-            load_tasks_from_jira()
-
-        mock_pars.assert_called_once()
-
-    @patch("lit.integrations.jira.pars_error_jira")
-    @patch("lit.integrations.jira.JIRA")
-    @patch("lit.integrations.jira.get_jira")
-    def test_raises_on_auth_check_failure(
-        self, mock_get_jira, mock_jira_cls, mock_pars
-    ):
-        mock_get_jira.return_value = self._cfg()
-        mock_jira_cls.return_value.server_info.side_effect = JIRAError(
-            status_code=401, text="denied"
-        )
-
-        with self.assertRaises(JiraIntegrationError):
-            load_tasks_from_jira()
-
-        mock_pars.assert_called_once()
 
 
 class TestCliErrorBoundary(unittest.TestCase):

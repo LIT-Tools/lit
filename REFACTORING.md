@@ -125,7 +125,7 @@ uv run lit status; echo "exit=$?"
 - [x] Шаг 3: `plain_text_to_adf()`
 - [x] Шаг 4: `jira_client.py` — единый клиент и выбор версии API
 - [x] Шаг 5: Push — ADF для v3, нормализация `Worklog`
-- [ ] Шаг 6: Pull — `currentUser()` и пагинация Cloud
+- [x] Шаг 6: Pull — `currentUser()` и пагинация Cloud
 - [ ] Шаг 7: Конфиг, `init`, CLI-граница, документация
 - [ ] Шаг 8: Сценарии ошибок + реальный smoke
 
