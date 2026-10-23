@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import MagicMock, call, patch
 
 from jira.exceptions import JIRAError
+from requests.exceptions import Timeout
 
 from lit.exceptions import ConfigError, JiraIntegrationError
 from lit.integrations.jira_client import (
@@ -131,8 +132,48 @@ class TestBuildJira(unittest.TestCase):
     def test_auth_error_is_wrapped(self, make_client):
         make_client.side_effect = JIRAError(status_code=401, text="denied")
 
-        with self.assertRaises(JiraIntegrationError):
+        with self.assertRaises(JiraIntegrationError) as ctx:
+            build_jira(self._cfg("3"))
+
+        self.assertIn("401", str(ctx.exception))
+        self.assertIn("API token", str(ctx.exception))
+
+    @patch("lit.integrations.jira_client._make_client")
+    def test_auto_auth_error_is_wrapped(self, make_client):
+        make_client.side_effect = JIRAError(status_code=401, text="denied")
+
+        with self.assertRaises(JiraIntegrationError) as ctx:
             build_jira(self._cfg())
+
+        self.assertIn("401", str(ctx.exception))
+
+    @patch("lit.integrations.jira_client._make_client")
+    def test_403_is_wrapped(self, make_client):
+        make_client.side_effect = JIRAError(status_code=403, text="forbidden")
+
+        with self.assertRaises(JiraIntegrationError) as ctx:
+            build_jira(self._cfg("3"))
+
+        self.assertIn("403", str(ctx.exception))
+
+    @patch("lit.integrations.jira_client._make_client")
+    def test_404_mentions_endpoint(self, make_client):
+        make_client.side_effect = JIRAError(status_code=404, text="not found")
+
+        with self.assertRaises(JiraIntegrationError) as ctx:
+            build_jira(self._cfg("3"))
+
+        self.assertIn("404", str(ctx.exception))
+        self.assertIn("endpoint", str(ctx.exception))
+
+    @patch("lit.integrations.jira_client._make_client")
+    def test_timeout_is_wrapped(self, make_client):
+        make_client.side_effect = Timeout("timeout")
+
+        with self.assertRaises(JiraIntegrationError) as ctx:
+            build_jira(self._cfg("3"))
+
+        self.assertIn("timeout", str(ctx.exception))
 
     @patch("lit.integrations.jira_client._make_client")
     def test_unexpected_error_is_wrapped(self, make_client):
@@ -185,6 +226,25 @@ class TestSearchAllIssues(unittest.TestCase):
 
         with self.assertRaises(JiraIntegrationError):
             search_all_issues(jira, "jql")
+
+    def test_403_is_wrapped(self):
+        jira = MagicMock()
+        jira._is_cloud = False
+        jira.search_issues.side_effect = JIRAError(
+            status_code=403, text="forbidden"
+        )
+
+        with self.assertRaises(JiraIntegrationError) as ctx:
+            search_all_issues(jira, "jql")
+
+        self.assertIn("403", str(ctx.exception))
+
+    def test_empty_list_stays_empty(self):
+        jira = MagicMock()
+        jira._is_cloud = True
+        jira.enhanced_search_issues.return_value = []
+
+        self.assertEqual(search_all_issues(jira, "jql"), [])
 
 
 class TestFormatJiraError(unittest.TestCase):
