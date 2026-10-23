@@ -40,12 +40,8 @@ TEST_COMMENT = (
 
 
 def mask(value: str) -> str:
-    """Скрыть секрет, оставив только края."""
-    if not value:
-        return "<empty>"
-    if len(value) <= 8:
-        return "*" * len(value)
-    return f"{value[:4]}...{value[-4:]}"
+    """Показать только факт наличия секрета, не раскрывая его."""
+    return "<set>" if value else "<empty>"
 
 
 def short(value: Any, limit: int = 600) -> str:

@@ -1,17 +1,16 @@
 # Jira REST API v3: план перехода и чек-лист
 
-> Статус: шаг 1 (spike) завершён. ADF принимается, plain string на v3
-> отклоняется; текущий `lit pull` падает с `NameError`, `lit push` на v2
-> работает.
-> Результаты: [`docs/jira-v3-spike.md`](./docs/jira-v3-spike.md).
+> Статус: миграция на Jira v3 завершена (шаги 0–8).
+> `lit pull --jira` и `lit push` проверены на Jira Cloud; ADF-комментарий
+> принимается. Результаты spike: [`docs/jira-v3-spike.md`](./docs/jira-v3-spike.md).
 > Базовая точка: `dev` / `1b30085`; 48 тестов, покрытие 72%.
 > Источник истины по командам — [`README.md`](./README.md).
 
 ## 1. Контекст
 
-`lit` работает с Jira Cloud (`https://dev-krd.atlassian.net`) через
-библиотеку `jira 3.10.5`. Сейчас в коде жёстко задан
-`rest_api_version = "2"`.
+`lit` работает с Jira Cloud (URL задаётся в `~/.lit/.litconfig`) через
+библиотеку `jira 3.10.5`. В baseline был жёстко задан
+`rest_api_version = "2"`; сейчас версия выбирается через `api_version`.
 
 В Jira Cloud REST API v3:
 
@@ -41,7 +40,7 @@
 
 ## 2. Что уже известно (проверено локально)
 
-- Инстанс — **Jira Cloud**: `https://dev-krd.atlassian.net`.
+- Инстанс — **Jira Cloud** (URL из `~/.lit/.litconfig`).
   `jira._is_cloud == True`.
 - Baseline: **48 тестов OK**, `TOTAL 72%`.
   `src/lit/integrations/jira.py` — 15%,
@@ -133,8 +132,8 @@ uv run lit status; echo "exit=$?"
 
 Финальный smoke (23.10.2026):
 - `lit pull --jira` → 15 уникальных задач, `exit=0`;
-- `lit push` → ADF-комментарий принят, worklog `217803` прочитан и удалён,
-  тестовых ворклогов в `EFESP-281` не осталось;
+- `lit push` → ADF-комментарий принят, worklog прочитан и удалён,
+  тестовых ворклогов в тестовой задаче не осталось;
 - `lit --help`, `lit -v`, `lit status` → `exit=0`.
 
 ## 7. Подробные шаги

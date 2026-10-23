@@ -8,9 +8,9 @@
 
 | Параметр | Значение |
 |---|---|
-| URL | `https://dev-krd.atlassian.net` |
-| login / email | `s.kushnarev@spider.ru` |
-| pass | `ATAT...071D` (API token, замаскирован) |
+| URL | `https://example.atlassian.net` |
+| login / email | `user@example.com` |
+| pass | API token (значение не сохраняется) |
 | days | 30 |
 
 ## История запусков
@@ -24,7 +24,7 @@
 deploymentType: Cloud
 _is_cloud: True
 server_info.version: 1001.0.0-SNAPSHOT
-current_user: 712020:6e48eeea-4616-4b4f-8fb0-b8dc86835d49
+current_user: account-id
 ```
 
 `current_user()` возвращает `accountId`, а не email. Это нормально для
@@ -44,15 +44,15 @@ found: 4
 
 Примеры:
 
-- `EFESF-12` — Архитектурное сопровождение Fleet Tools;
-- `EFESC-459` — Падение джобы sync-swe-upl-products;
-- `EFESA-684` — Смена домена почтовых адресов пользователей.
+- `TEST-1` — пример задачи с назначением на текущего пользователя;
+- `TEST-2` — пример задачи с worklog;
+- `TEST-3` — пример задачи с ADF-описанием.
 
 ## Типы полей
 
 ### description
 
-Для задачи `EFESC-459`:
+Для задачи `TEST-2`:
 
 ```text
 description type: PropertyHolder
@@ -81,7 +81,7 @@ raw fields.description type: dict
 
 ### worklog comment
 
-Для задачи `EFESA-684`:
+Для задачи `TEST-3`:
 
 ```text
 worklog comment type: PropertyHolder
@@ -108,7 +108,7 @@ raw worklog comment type: dict
 `PropertyHolder` — это обёртка библиотеки, реальные данные лежат в
 `.raw`.
 
-## Write-test на EFESP-281
+## Write-test на TEST-4
 
 Использован сложный комментарий:
 
@@ -142,11 +142,11 @@ JIRAError status=400: INVALID_INPUT
 
 Подтверждено: на v3 `comment` обязан быть ADF. Строка отклоняется.
 
-После теста worklog удалён; в `EFESP-281` осталось 0 worklog'ов.
+После теста worklog удалён; в `TEST-4` осталось 0 worklog'ов.
 
-## Проверка текущей реализации lit
+## Проверка реализации lit на момент spike
 
-С новым токеном:
+Ниже — состояние до миграции, сохранённое как история.
 
 | Команда | Результат |
 |---|---|
@@ -200,14 +200,13 @@ enhanced_search_issues -> OK, issues: 2
 10. Текущий `lit push` на v2 работает, а `lit pull --jira` падает с
     `NameError: TARGET_USER`.
 
-## Что осталось
+## Итог миграции
 
-- Реализовать шаги 2–8 из `REFACTORING.md`.
-- После исправления pull проверить `lit pull --jira` на реальном
-  инстансе.
-- Проверить `lit push` после перехода на v3 и ADF.
+Шаги 2–8 из `REFACTORING.md` реализованы в ветке `feature/jira-v3`.
+На Jira Cloud проверены:
 
-## Следующий шаг
+- `lit pull --jira` — задачи получены, `exit=0`;
+- `lit push` — ADF-комментарий принят, тестовый worklog удалён;
+- `lit --help`, `lit -v`, `lit status` — `exit=0`.
 
-Шаг 1 завершён. Переходим к шагу 2 — `src/lit/exceptions.py` и отказ от
-`exit()` в интеграциях.
+Подробный чек-лист и результаты — в `REFACTORING.md`.
