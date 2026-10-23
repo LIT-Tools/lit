@@ -16,7 +16,7 @@ from lit.integrations.jira import load_tasks_from_jira
 from lit.integrations.gitlab import load_commits_from_gitlab
 from lit.integrations.jira_push import add_worklog, jira_connect
 from lit.utils import sort_key, load_dict, safe_split
-from lit.core.worklog_manager import WorklogManager
+from lit.core.worklog_manager import LitArgumentParser, WorklogManager
 
 from lit.config_manager import get_user
 from lit.exceptions import LitError
@@ -217,8 +217,12 @@ def main(parser):
 
 def create_argument_parser():
     """Создает и возвращает настроенный парсер аргументов"""
-    parser = argparse.ArgumentParser(description="Утилита для работы с ворклогами.")
-    subparsers = parser.add_subparsers(dest='command', help='Доступные команды')
+    parser = LitArgumentParser(description="Утилита для работы с ворклогами.")
+    subparsers = parser.add_subparsers(
+        dest='command',
+        help='Доступные команды',
+        parser_class=LitArgumentParser,
+    )
 
     parser.add_argument(
         '-v', '--version',
