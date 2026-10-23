@@ -325,6 +325,30 @@ class TestVersionCommand(unittest.TestCase):
             self.assertEqual(fake_out.getvalue(), expected_output)
 
 
+class TestGetVersion(unittest.TestCase):
+    def test_returns_package_version(self):
+        """В установленном пакете версия берётся из метаданных, а не 0.0.0-dev."""
+        import lit
+
+        self.assertRegex(lit.get_version(), r"^\d+\.\d+\.\d+")
+
+    def test_frozen_fallback_reads_pyproject(self):
+        """В onefile-сборке PyInstaller версия читается из _MEIPASS/pyproject.toml."""
+        import tempfile
+        from importlib.metadata import PackageNotFoundError
+        from pathlib import Path
+        import lit
+
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "pyproject.toml").write_text(
+                '[project]\nname = "lit"\nversion = "9.9.9"\n',
+                encoding="utf-8",
+            )
+            with patch.object(lit, "package_version", side_effect=PackageNotFoundError), \
+                 patch.object(lit.sys, "_MEIPASS", tmp, create=True):
+                self.assertEqual(lit.get_version(), "9.9.9")
+
+
 class TestInteractiveVersion(unittest.TestCase):
     @patch('lit.patch_stdout', new=lambda: contextlib.nullcontext())
     @patch('lit.PromptSession')

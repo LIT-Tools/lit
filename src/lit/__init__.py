@@ -3,8 +3,9 @@ import argparse
 import shlex
 import re
 import subprocess
-import tomllib
+import sys
 from datetime import datetime, timedelta, time as dt_time
+from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
@@ -130,14 +131,37 @@ class WorklogCompleter(Completer):
         return
 
 def get_version():
-    """Получить версию из pyproject.toml"""
+    """Получить версию пакета.
+
+    Сначала пробуем метаданные установленного пакета (работает для `uv sync`
+    и editable-установки). Если их нет — читаем `pyproject.toml`: рядом с
+    исходниками или в корне onefile-сборки PyInstaller (`sys._MEIPASS`).
+    """
     try:
-        path = Path(__file__).parent / "pyproject.toml"
-        with open(path, "rb") as f:
-            data = tomllib.load(f)
-        return data["project"]["version"]
-    except (KeyError, FileNotFoundError):
-        return "0.0.0-dev"
+        return package_version("lit")
+    except PackageNotFoundError:
+        pass
+
+    candidates = []
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidates.append(Path(meipass) / "pyproject.toml")
+    candidates.append(Path(__file__).resolve().parents[2] / "pyproject.toml")
+
+    for path in candidates:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        match = re.search(
+            r'^\[project\][^\[]*?^version\s*=\s*"([^"]+)"',
+            text,
+            re.MULTILINE | re.DOTALL,
+        )
+        if match:
+            return match.group(1)
+
+    return "0.0.0-dev"
 
 
 def main(parser):
