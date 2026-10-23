@@ -23,11 +23,22 @@ def get_user(cfg=None) -> dict:
 def get_jira(cfg=None) -> dict:
     """Получить секцию [jira]."""
     cfg = cfg or load_config()
+    login = (
+        cfg.get("jira", "login", fallback="")
+        or cfg.get("jira", "email", fallback="")
+    )
+    email = cfg.get("jira", "email", fallback="") or login
+    api_version = (
+        cfg.get("jira", "api_version", fallback="auto").strip().lower()
+        or "auto"
+    )
     return {
-        "login": cfg.get("jira", "login", fallback=""),
+        "login": login,
+        "email": email,
         "pass": cfg.get("jira", "pass", fallback=""),
         "url": cfg.get("jira", "url", fallback=""),
         "days": cfg.getint("jira", "days", fallback=30),
+        "api_version": api_version,
     }
 
 

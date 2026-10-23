@@ -39,28 +39,55 @@ def init_config():
     # Zebrains-домен (определяем из email до вопросов)
     is_zebrains_user = "zebrains" in (user_email.split("@")[1] if "@" in user_email else "")
     jira_url_default = "https://jira.itech-group.ru" if is_zebrains_user else ""
-    
-    jira_login = questionary.text(
-        "Jira login:",
-        default=default.get("jira", "login", fallback=user_email.split("@")[0] if "@" in user_email else "")
+
+    jira_url = questionary.text(
+        "Jira URL:",
+        default=default.get("jira", "url", fallback=jira_url_default)
     ).ask()
-    # TODO API token пока почему то не срабатывает, нужно разобраться, сейчас оставил в подсказке только пароль
-    jira_pass = questionary.password(
-        "Jira password:",
-        default=default.get("jira", "pass", fallback="")
-    ).ask()
+    is_cloud = ".atlassian.net" in (jira_url or "").lower()
+
+    jira_email_default = (
+        default.get("jira", "email", fallback="")
+        or default.get("jira", "login", fallback="")
+        or user_email
+    )
+
+    if is_cloud:
+        jira_login = questionary.text(
+            "Jira email:",
+            default=jira_email_default
+        ).ask()
+        jira_email = jira_login
+        jira_pass = questionary.password(
+            "Jira API token:",
+            default=default.get("jira", "pass", fallback=""),
+            instruction=(
+                "\n  [Cloud: basic auth = email + API token]"
+                "\n  [Создать токен: https://id.atlassian.com/manage-profile/security/api-tokens]"
+            )
+        ).ask()
+    else:
+        jira_login = questionary.text(
+            "Jira login:",
+            default=default.get("jira", "login", fallback=user_email.split("@")[0] if "@" in user_email else "")
+        ).ask()
+        jira_email = default.get("jira", "email", fallback="")
+        jira_pass = questionary.password(
+            "Jira password или PAT:",
+            default=default.get("jira", "pass", fallback=""),
+            instruction="\n  [Data Center: пароль или personal access token]"
+        ).ask()
 
     config["jira"] = {
         "login": jira_login,
+        "email": jira_email,
         "pass": jira_pass,
-        "url": questionary.text(
-            "Jira URL:",
-            default=default.get("jira", "url", fallback=jira_url_default)
-        ).ask(),
+        "url": jira_url,
         "days": questionary.text(
             "Days to sync:",
             default=default.get("jira", "days", fallback="30")
-        ).ask()
+        ).ask(),
+        "api_version": default.get("jira", "api_version", fallback="auto"),
     }
 
     # Секция [gitlab]

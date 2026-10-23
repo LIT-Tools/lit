@@ -147,10 +147,13 @@ email = user@domain.com
 editor = nano # C:\Program Files\Notepad++\notepad++.exe
 
 [jira]
-login = user
-pass = password
-url = https://jira.com
+# Jira Cloud: basic auth = email + API token
+email = user@domain.com
+login = user@domain.com
+pass = ваш_api_token
+url = https://your-domain.atlassian.net
 days = 30
+api_version = auto
 
 [gitlab]
 email = user@domain.com
@@ -158,6 +161,15 @@ url = https://gitlab.com
 token = ваш_личный_токен
 days = 30
 ```
+
+Для Jira Cloud укажите `email` и API token в `pass`. Токен создаётся на
+[странице управления токенами Atlassian](https://id.atlassian.com/manage-profile/security/api-tokens).
+Для Jira Data Center используйте `login` и `pass` (пароль или personal access token);
+`email` в этом случае нужен только как fallback для `login`.
+
+`api_version` управляет версией REST API:
+- `auto` (по умолчанию) — Cloud → v3, Data Center → v2;
+- `2` или `3` — принудительно выбрать версию.
 
 `days` в секциях `[jira]` и `[gitlab]` задаёт глубину загрузки при `lit pull`.
 
