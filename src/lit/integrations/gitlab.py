@@ -21,6 +21,8 @@ def save_commits(data: dict):
         print(f"Error saving commits: {str(e)}")
 
 
+USER_EMAIL = ""
+
 def load_commits_from_gitlab() -> None:
     """Загрузка коммитов из GitLab."""
     load_config()

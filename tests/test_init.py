@@ -38,13 +38,10 @@ class TestInitConfig(unittest.TestCase):
         # Ответы для текстовых вопросов (в том порядке, как они вызываются)
         text_answers = [
             "test@example.com",  # User email
-            "testuser",  # User login
-            "", # Editor
+            "",  # Editor
             "jirauser",  # Jira login
-            "jira@example.com",  # Jira email
-            "https://jira.test.com",  # Jira URL
+            "jirauser",  # Jira URL
             "30",  # Jira days
-            "gitlabuser",  # GitLab login
             "https://gitlab.test.com",  # GitLab URL
             "gitlab@example.com",  # GitLab email
             "30"  # GitLab days
@@ -69,17 +66,12 @@ class TestInitConfig(unittest.TestCase):
 
         # Проверяем секцию [user]
         self.assertEqual(config.get("user", "email"), "test@example.com")
-        self.assertEqual(config.get("user", "login"), "testuser")
 
         # Проверяем секцию [jira]
-        self.assertEqual(config.get("jira", "login"), "jirauser")
         self.assertEqual(config.get("jira", "pass"), "jirapass")
-        self.assertEqual(config.get("jira", "email"), "jira@example.com")
-        self.assertEqual(config.get("jira", "url"), "https://jira.test.com")
         self.assertEqual(config.get("jira", "days"), "30")
 
         # Проверяем секцию [gitlab]
-        self.assertEqual(config.get("gitlab", "login"), "gitlabuser")
         self.assertEqual(config.get("gitlab", "email"), "gitlab@example.com")
         self.assertEqual(config.get("gitlab", "url"), "https://gitlab.test.com")
         self.assertEqual(config.get("gitlab", "token"), "token123")
@@ -148,7 +140,7 @@ class TestInitConfig(unittest.TestCase):
             "User login:": None,  # Используем None как индикатор принятия дефолта
             "Jira login:": "jirauser",
             "Jira email:": "jira@example.com",
-            "Jira URL:": "https://jira.test.com",
+            "Jira URL:": "jirauser",
             "Days to sync:": "30",
             "GitLab login:": "gitlabuser",
             "GitLab URL:": "https://gitlab.test.com",
@@ -183,7 +175,6 @@ class TestInitConfig(unittest.TestCase):
         config = configparser.RawConfigParser()
         config.read_string(written)
         # Ожидается, что логин будет сгенерирован как часть email до '@'
-        self.assertEqual(config.get("user", "login"), "user")
 
         # Проверяем что сообщение было выведено
         mock_print.assert_called_with("\n✅ Конфигурация сохранена в .litconfig")

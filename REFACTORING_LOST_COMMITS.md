@@ -55,16 +55,16 @@
 Все 6 коммитов трогают `.litconfig`-схему и её потребителей. По
 отдельности тесты будут красными. Один шаг = один коммит.
 
-- [ ] `abfafc49` — `refactor: removed field of config user login`
-- [ ] `c98db846` — `refactor: removed field of config jira email`
-- [ ] `ed5290ce` — `refactor: removed field of config gitlab login`
-- [ ] `63eb82c4` — `feat(config): dynamic URLs by user domain` (zebrains)
-- [ ] `2ed64bb9` — `refactor(config): added hint for token Select scopes: api`
-- [ ] `1e5cea6b` — `docs: fixed example .litconfig`
+- [x] `abfafc49` — `refactor: removed field of config user login`
+- [x] `c98db846` — `refactor: removed field of config jira email`
+- [x] `ed5290ce` — `refactor: removed field of config gitlab login`
+- [x] `63eb82c4` — `feat(config): dynamic URLs by user domain` (zebrains)
+- [x] `2ed64bb9` — `refactor(config): added hint for token Select scopes: api`
+- [x] `1e5cea6b` — `docs: fixed example .litconfig`
 
 ### 🟡 Шаг E — `UPDATE.md` (draft фичи)
 
-- [ ] `8af3c39f` — `docs: added UPDATE.md` (черновик auto-update; перенести
+- [x] `8af3c39f` — `docs: added UPDATE.md` (черновик auto-update; перенести
   как draft, не в код)
 
 ### ⚪ Не переносить

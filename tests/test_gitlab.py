@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import lit.integrations.gitlab
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import io
 import sys
 
@@ -21,7 +21,7 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
         # Установка тестовой конфигурации
         lit.integrations.gitlab.GITLAB_URL = 'https://gitlab.example.com'
         lit.integrations.gitlab.TOKEN = 'fake_token'
-        lit.integrations.gitlab.TARGET_USER = 'test_user'
+        lit.integrations.gitlab.USER_EMAIL = 'test_user@example.com'
         lit.integrations.gitlab.DAYS = 7
 
         # Фиксация времени
@@ -58,7 +58,6 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
 
         # Создаём необходимые ответы для всех запросов
         mock_responses = [
-            self.create_response({'username': 'test_user'}),  # /user
             self.create_response([{'id': 1}, {'id': 2}]),  # /projects page1
             self.create_response([]),  # /projects page2 (пустой)
             self.create_response([{  # /projects/1/repository/commits
@@ -73,12 +72,6 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
         self.mock_requests.get.side_effect = mock_responses
 
         lit.integrations.gitlab.load_commits_from_gitlab()
-
-        # Проверка вызовов API
-        self.mock_requests.get.assert_any_call(
-            'https://gitlab.example.com/api/v4/user',
-            headers={'Private-Token': 'fake_token'}
-        )
 
         self.mock_requests.get.assert_any_call(
             'https://gitlab.example.com/api/v4/projects',
@@ -98,7 +91,6 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
     def test_commit_filtering(self):
         """Тест фильтрации коммитов"""
         self.mock_requests.get.side_effect = [
-            self.create_response({'username': 'test_user'}),
             self.create_response([{'id': 1}]),
             self.create_response([]),
             self.create_response([
@@ -139,7 +131,7 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
             # Первый вызов - для /api/v4/user - успешный
             if call_count == 1:
                 mock_resp = MagicMock()
-                mock_resp.json.return_value = {'username': 'test_user'}
+                mock_resp.json.return_value = {'username': 'test_user@example.com'}
                 mock_resp.status_code = 200
                 return mock_resp
             # Второй вызов - для /api/v4/users/{username}/projects - с ошибкой
@@ -170,7 +162,6 @@ class TestLoadCommitsFromGitlab(unittest.TestCase):
     def test_message_parsing(self):
         """Тест парсинга сообщений коммитов"""
         self.mock_requests.get.side_effect = [
-            self.create_response({'username': 'test_user'}),
             self.create_response([{'id': 1}]),
             self.create_response([]),
             self.create_response([
