@@ -1,471 +1,402 @@
-# 🤖 Ralph Loop: Переход коннектора Jira на REST API v3
+# Jira REST API v3: план перехода и чек-лист
 
-Этот документ — план цикла подготовки и перехода `lit` на Jira Cloud
-REST API v3. Предназначен для автономного выполнения локальной моделью
-(Qwen) в цикле Ralph Loop.
+> Статус: шаг 1 (spike) запущен. Авторизация Jira вернула `401`
+> (`AUTHENTICATED_FAILED`) — нужен новый API token.
+> Результаты: [`docs/jira-v3-spike.md`](./docs/jira-v3-spike.md).
+> Базовая точка: `dev` / `1b30085`; 48 тестов, покрытие 72%.
+> Источник истины по командам — [`README.md`](./README.md).
 
-> ⚠️ Имена файлов/функций — из текущего состояния репозитория
-> (`src/lit/` layout, 44 теста OK). Источник истины по командам —
-> `README.md`.
+## 1. Контекст
 
-## 🎯 Контекст
+`lit` работает с Jira Cloud (`https://dev-krd.atlassian.net`) через
+библиотеку `jira 3.10.5`. Сейчас в коде жёстко задан
+`rest_api_version = "2"`.
 
-- Сейчас `lit` использует библиотеку `jira` с `rest_api_version = "2"`
-  (default). Jira Cloud перешла на v3, где `comment` в worklog и
-  `description` в issue — **ADF (Atlassian Document Format)**, JSON-дерево,
-  а не plain text[reference:3][reference:4].
-- Библиотека `jira` умеет `options={"rest_api_version": "3"}`, но
-  **не конвертирует** plain text в ADF автоматически[reference:5]. Нужна
-  своя функция конверсии.
-- Без этого текущий коннектор к Cloud-инстансам на v3 либо падает, либо
-  молча теряет комментарий ворклога.
+В Jira Cloud REST API v3:
 
-**Цель цикла — не «переписать всё», а сделать переход безопасным и
-проверяемым.** После цикла — сама фича «поддержка v3» (отдельно).
+- `comment` в worklog — **ADF** (Atlassian Document Format), JSON-дерево,
+  а не plain text;
+- поиск задач — `/rest/api/3/search/jql`, пагинация через
+  `nextPageToken`;
+- basic auth — **email + API token**, а не логин + пароль.
 
-## ⚙️ Главные правила
+Библиотека `jira` умеет `options={"rest_api_version": "3"}`, но:
 
-1. **Spike ≠ TDD.** Шаг 1 (прототип) — разведка, без тестов. Его
-   результат — знание (какой API отвечает, что возвращает), а не код,
-   который останется в проекте.
-2. **TDD после spike.** Шаги 2–6: сначала красный тест (на подтверждённое
-   поведение), потом минимальная реализация до зелёного, потом рефактор.
-3. **Атомарность.** Один шаг — один коммит. Не смешивать ADF-конверсию и
-   параметризацию API-версии в одном шаге.
-4. **Откат.** Если после 3 точечных правок красное — `git checkout . &&
-   git clean -fd`, следующая попытка с чистого листа.
-5. **Коммит.** Conventional Commits. Ветка `feature/jira-v3`.
+- **не конвертирует** plain text в ADF;
+- на Cloud автоматически переключает `search_issues()` на
+  `enhanced_search_issues()`, но только при `startAt == 0`;
+- при `startAt != 0` на Cloud бросает `JIRAError`
+  («The `search` API is deprecated…»).
 
-## 🧰 Предварительная подготовка (один раз)
+`lit` использует только четыре возможности Jira:
+
+1. `server_info()` / `current_user()` — проверка подключения;
+2. `search_issues()` — `lit pull --jira`;
+3. `add_worklog()` — `lit push`;
+4. `worklogs()` — только для диагностики, в бизнес-логике не используется.
+
+`description` задач и чтение комментариев в `lit` не используются,
+поэтому ADF для `description` в этом цикле **не нужен**.
+
+## 2. Что уже известно (проверено локально)
+
+- Инстанс — **Jira Cloud**: `https://dev-krd.atlassian.net`.
+  `jira._is_cloud == True`.
+- Baseline: **48 тестов OK**, `TOTAL 72%`.
+  `src/lit/integrations/jira.py` — 15%,
+  `src/lit/integrations/jira_push.py` — 54%.
+- `lit pull --jira` уже сломан: в `src/lit/integrations/jira.py:80-81`
+  используется неопределённый `TARGET_USER` → `NameError`.
+- Пагинация в `jira.py:83-105` построена на `startAt` и на Cloud
+  ломается после первой страницы.
+- `jira.add_worklog()` возвращает `Worklog`, а не `str`.
+  В `jira_push.py:50` это маскируется тем, что `str(Worklog)` возвращает
+  `id`, но проверка `if not id` и типы некорректны.
+- В библиотеке `jira` нет хелперов для ADF.
+- `src/lit/cli.py` отсутствует: CLI находится в `src/lit/__init__.py`
+  (`process_arguments`, `main`).
+- `docs/refactoring-log.md`, на который ссылался старый план, отсутствует.
+
+## 3. Цели и не-цели
+
+### Цели
+
+1. Прототип, подтверждающий поведение Jira Cloud v3 на реальном
+   инстансе: auth, поиск, типы полей, пагинация, ADF.
+2. Единый клиент Jira с выбором версии API (`auto` / `2` / `3`).
+3. ADF для `comment` в worklog при v3.
+4. Починить `lit pull --jira`: `TARGET_USER`, пагинация, ошибки.
+5. Ошибки через исключения, без `exit()` в интеграциях.
+6. Тесты на все изменённые пути; не снизить покрытие.
+
+### Не-цели
+
+- ADF для `description` задач;
+- чтение и рендер ADF из Jira;
+- перенос CLI в отдельный `cli.py`;
+- `WorklogEntry` dataclass;
+- GitLab;
+- auto-update.
+
+## 4. Главные правила
+
+1. **Spike ≠ TDD.** Шаг 1 — разведка. Production-код не трогаем.
+   Результат — знание, а не код, который останется в проекте.
+2. **TDD после spike.** Шаги 2–8: сначала красный тест на подтверждённое
+   поведение, потом минимальная реализация, потом рефактор.
+3. **Атомарность.** Один шаг — один коммит. Conventional Commits.
+4. **Откат.** Если после 3 точечных правок красное —
+   `git checkout . && git clean -fd`, следующая попытка с чистого листа.
+5. **Секреты.** Токены и пароли не попадают в логи, отчёты и коммиты.
+
+## 5. Baseline
 
 ```bash
-git status                                # чисто
-git checkout -b feature/jira-v3           # или продолжай текущую
+git status
+git branch --show-current
+git log --oneline -3
 uv sync
+uv run coverage run -m unittest discover
+uv run coverage report -m
 ```
 
-**Команда проверки** (единая):
+Ожидаемо:
+
+- ветка `feature/jira-v3`;
+- дерево чистое;
+- `Ran 48 tests`, `OK`;
+- `TOTAL` не ниже 72%;
+- `jira.py` и `jira_push.py` — основные точки роста покрытия.
+
+Smoke:
+
 ```bash
-uv run coverage run -m unittest discover && uv run coverage report -m
-```
-**Признак успеха**: `44 tests OK` (не меньше), покрытие ≥82%.
-
-**Smoke**:
-```bash
-uv run lit --help;    echo "exit=$?"
-uv run lit -v;        echo "exit=$?"
-uv run lit status;    echo "exit=$?"
+uv run lit --help; echo "exit=$?"
+uv run lit -v; echo "exit=$?"
+uv run lit status; echo "exit=$?"
 ```
 
----
+## 6. Чек-лист
 
-## 📋 Чек-лист
+- [ ] Шаг 0: Baseline
+- [ ] Шаг 1: Spike-прототип Jira v3 — **в работе**: `401`, ждёт новый API token
+- [ ] Шаг 2: `exceptions.py` + отказ от `exit()`
+- [ ] Шаг 3: `plain_text_to_adf()`
+- [ ] Шаг 4: `jira_client.py` — единый клиент и выбор версии API
+- [ ] Шаг 5: Push — ADF для v3, нормализация `Worklog`
+- [ ] Шаг 6: Pull — `currentUser()` и пагинация Cloud
+- [ ] Шаг 7: Конфиг, `init`, CLI-граница, документация
+- [ ] Шаг 8: Сценарии ошибок + реальный smoke
 
-- [ ] Шаг 0 (prereq): Baseline
-- [ ] Шаг 1: Spike-прототип Jira v3 (ручная проверка)
-- [ ] Шаг 2: `plain_text_to_adf()` — TDD
-- [ ] Шаг 3: Параметризация `rest_api_version` — TDD
-- [ ] Шаг 4: `add_worklog` с ADF для v3 — TDD
-- [ ] Шаг 5: `exceptions.py` + отказ от `exit()` — TDD
-- [ ] Шаг 6: Покрытие сценариев ошибок Jira — TDD
+## 7. Подробные шаги
 
----
-
-## 🚀 Подробные шаги
-
-### Шаг 0 (prereq): Baseline
+### Шаг 0: Baseline
 
 - **Цель**: зафиксировать зелёную стартовую точку и хэш для отката.
-- **Инструкция**:
-  ```bash
-  git status
-  git branch --show-current
-  git log --oneline -3
-  git rev-parse HEAD          # в отчёт — точка отката
-  uv run coverage run -m unittest discover && uv run coverage report -m
-  uv run lit --help; echo "exit=$?"
-  uv run lit -v; echo "exit=$?"
-  uv run lit status; echo "exit=$?"
-  ```
-- **Признак успеха**: 44 OK, smoke `exit=0`, дерево чисто.
+- **Команды**: см. раздел 5.
+- **Признак успеха**: 48 OK, smoke `exit=0`, дерево чистое.
 - **Коммит**: не нужен.
 
 ---
 
-### Шаг 1: Spike-прототип Jira v3 (ручная проверка)
+### Шаг 1: Spike-прототип Jira v3
 
-**Цель**: узнать, как реально ведёт себя библиотека `jira` с
-`rest_api_version="3"` на вашем Cloud-инстансе. **Кода в основном
-пакете не трогаем.**
+**Цель**: узнать, как реально ведёт себя Jira Cloud и библиотека `jira`
+с `rest_api_version="3"` на вашем инстансе. **Код в `src/` не трогаем.**
 
-#### 1.1. Создать временный скрипт `scripts/jira_v3_probe.py`
+#### 1.1. Скрипт `scripts/jira_v3_probe.py`
 
-Директория `scripts/` — новая, не часть пакета `lit`, в wheel не уедет.
+Скрипт одноразовый, но с двумя режимами:
 
-```python
-"""Spike: проверка подключения к Jira Cloud REST API v3.
+- **read-only (по умолчанию)** — только чтение:
+  - создаёт клиент v3 с `basic_auth=(login/email, pass)`;
+  - печатает `rest_api_version`, `deploymentType`, `_is_cloud`,
+    `server_info()`, `current_user()` (секреты маскируются);
+  - ищет задачи по JQL:
+    - `assignee = currentUser() ORDER BY updated DESC`;
+    - `worklogAuthor = currentUser() AND worklogDate >= -30d`;
+  - печатает ключ, summary, статус, исполнителя;
+  - печатает тип `description` у первой задачи;
+  - печатает тип `comment` у первого worklog;
+  - проверяет пагинацию: `search_issues(..., startAt=1)` — на Cloud
+    ожидается `JIRAError`;
+  - проверяет `enhanced_search_issues()` на Cloud;
+  - создаёт клиент v2 для сравнения.
+- **`--write-test ISSUE-KEY`** — только по явному указанию безопасной
+  задачи:
+  - добавляет worklog на 1 минуту с ADF-комментарием;
+  - читает его обратно, проверяет тип `comment`;
+  - удаляет worklog;
+  - отдельно пробует plain string на v3 (ожидается `400`);
+  - если string-worklog всё же создался — удаляет.
 
-Одноразовый скрипт. После подтверждения — удалить или переписать
-в тесты/реализацию.
-
-Запуск:
-    uv run python scripts/jira_v3_probe.py
-"""
-from jira import JIRA
-from lit.config_manager import get_jira
-
-cfg = get_jira()
-print("URL:", cfg["url"])
-print("Login:", cfg["login"])
-
-jira = JIRA(
-    server=cfg["url"],
-    basic_auth=(cfg["login"], cfg["pass"]),
-    options={"rest_api_version": "3"},
-)
-
-print("Подключение OK, версия:", jira._options.get("rest_api_version"))
-
-# 1. Скачать одну задачу (JQL)
-issues = jira.search_issues("assignee = currentUser() ORDER BY updated DESC", maxResults=1)
-print("Найдено задач:", len(issues))
-if issues:
-    issue = issues[0]
-    print("Ключ:", issue.key)
-    print("Summary:", issue.fields.summary)
-    print("Тип description:", type(issue.fields.description).__name__)
-    print("description (repr):", repr(issue.fields.description)[:500])
-
-# 2. Прочитать worklog (если есть)
-if issues:
-    wls = jira.worklogs(issues[0].key)
-    print("Worklog'ов:", len(wls))
-    for wl in wls[:1]:
-        print("comment type:", type(getattr(wl, "comment", None)).__name__)
-        print("comment (repr):", repr(getattr(wl, "comment", None))[:500])
-```
-
-#### 1.2. Запустить и записать результат
+#### 1.2. Запуск
 
 ```bash
-uv run python scripts/jira_v3_probe.py 2>&1 | tee /tmp/jira_v3_probe.log
-echo "exit=$?"
+uv run python scripts/jira_v3_probe.py
+uv run python scripts/jira_v3_probe.py --write-test TEST-123
 ```
 
-**Что проверить в выводе:**
-- Подключение проходит без `401`/`404`.
-- `rest_api_version` = `"3"` (или что вернула библиотека).
-- `search_issues` возвращает задачи (не пусто, если у пользователя есть
-  задачи).
-- `type(issue.fields.description).__name__` — `dict` (ADF) или `str`?
-  Для v3 ожидается `dict` (ADF).
-- `type(wl.comment).__name__` — аналогично.
+Результат сохранить в `docs/jira-v3-spike.md` **без токена и пароля**.
 
-**Если на каком-то шаге падает** — записать точную ошибку в отчёт.
-Скорее всего, либо `rest_api_version` не подхватился, либо Cloud
-требует другую аутентификацию (email+token, а не login+pass — проверить).
+#### 1.3. Что должно стать известно
 
-#### 1.3. НЕ трогать основной код
-
-- `src/lit/integrations/jira.py`, `jira_push.py` — не менять.
-- `tests/` — не менять.
-- `scripts/jira_v3_probe.py` — **не коммитить** (либо в `.gitignore`,
-  либо удалить после проверки). Это разведка, не артефакт.
+1. Проходит ли basic auth с текущими `login` / `pass` на Cloud?
+2. `deploymentType` — `Cloud`?
+3. `description` и `comment` — `dict` (ADF) или `str`?
+4. Ломается ли `startAt`-пагинация?
+5. Падает ли v3 на string-комментарии и проходит ли ADF?
+6. Работают ли `currentUser()` в JQL для `assignee` и `worklogAuthor`?
+7. Нужно ли обновлять креды (email + API token вместо пароля)?
 
 #### DoD шага 1
 
-- Скрипт создан, запущен, вывод сохранён.
-- В отчёте: `rest_api_version`, тип `description`, тип `comment`,
-  любые ошибки.
-- **Пользователь вручную подтверждает**, что подключение и скачивание
-  работают (или объясняет, что именно не так).
-- Основной код не изменён: `git status` показывает только
-  `scripts/jira_v3_probe.py` (untracked) или пусто, если удалили.
-- **Коммит**: не нужен. Или `chore: add temporary jira v3 probe` с
-  пометкой «удалить после шага 2» — на усмотрение пользователя.
+- Скрипт создан и запущен.
+- Вывод сохранён в `docs/jira-v3-spike.md` без секретов.
+- Есть ответы на 7 вопросов выше.
+- `src/` и `tests/` не изменены.
+- `git status` показывает только `scripts/jira_v3_probe.py` и
+  `docs/jira-v3-spike.md` (или скрипт не коммитится).
+- **Коммит**: `docs: record jira v3 spike` (опционально; скрипт можно
+  оставить untracked).
 
 ---
 
-### Шаг 2: `plain_text_to_adf()` — TDD
+### Шаг 2: `exceptions.py` + отказ от `exit()`
 
-**Цель**: чистая функция конверсии plain text → ADF dict для `comment`
-в worklog. Без HTTP, без Jira-клиента.
+**Цель**: интеграции не завершают процесс, а поднимают типизированные
+исключения.
 
-#### 2.1. Красный тест (сначала)
+- Создать `src/lit/exceptions.py`:
 
-Создать `tests/test_adf.py`:
+  ```python
+  class LitError(Exception): ...
+  class JiraIntegrationError(LitError): ...
+  class GitLabIntegrationError(LitError): ...
+  class ConfigError(LitError): ...
+  ```
 
-```python
-import unittest
-from lit.integrations.adf import plain_text_to_adf
+- В `jira_connect()` и `load_tasks_from_jira()` заменить `exit()` на
+  `raise JiraIntegrationError(...) from e`.
+- В `src/lit/__init__.py` на границе CLI ловить `LitError`, печатать в
+  `stderr`, возвращать `exit(1)`.
+- **Коммит**: `refactor(integrations): raise LitError instead of exit()`.
 
+#### DoD
 
-class TestPlainTextToADF(unittest.TestCase):
-    def test_single_line(self):
-        result = plain_text_to_adf("hello")
-        self.assertEqual(result["type"], "doc")
-        self.assertEqual(result["version"], 1)
-        self.assertEqual(result["content"][0]["type"], "paragraph")
-        self.assertEqual(
-            result["content"][0]["content"][0]["text"], "hello"
-        )
-
-    def test_multiline(self):
-        result = plain_text_to_adf("line1\nline2")
-        paras = result["content"]
-        self.assertEqual(len(paras), 2)
-        self.assertEqual(paras[0]["content"][0]["text"], "line1")
-        self.assertEqual(paras[1]["content"][0]["text"], "line2")
-
-    def test_empty(self):
-        result = plain_text_to_adf("")
-        self.assertEqual(result["type"], "doc")
-        self.assertEqual(result["content"], [])
-```
-
-Запустить — **должно быть `ImportError` / `ModuleNotFoundError`**.
-Это красный тест.
-
-#### 2.2. Реализация
-
-Создать `src/lit/integrations/adf.py`:
-
-```python
-"""Конверсия plain text -> Atlassian Document Format (ADF)."""
-from __future__ import annotations
-
-
-def plain_text_to_adf(text: str) -> dict:
-    """Обернуть plain text в минимальный ADF-документ."""
-    if not text:
-        return {"type": "doc", "version": 1, "content": []}
-    paragraphs = [
-        {"type": "paragraph", "content": [{"type": "text", "text": line}]}
-        for line in text.split("\n")
-    ]
-    return {"type": "doc", "version": 1, "content": paragraphs}
-```
-
-Прогнать тесты — зелёные.
-
-#### DoD шага 2
-
-- `uv run coverage run -m unittest discover && uv run coverage report -m`
-  → 47 OK (44 + 3 новых), `TOTAL` ≥82%.
-- `uv run python -c "from lit.integrations.adf import plain_text_to_adf; print(plain_text_to_adf('hi'))"` → `exit=0`.
-- **Коммит**: `feat(integrations): add plain_text_to_adf for Jira v3`
-
----
-
-### Шаг 3: Параметризация `rest_api_version` — TDD
-
-**Цель**: `jira_connect()` умеет принимать/читать `rest_api_version` из
-конфига, default `"2"` (совместимость), явно `"3"` для Cloud.
-
-#### 3.1. Обследование
-
-```bash
-grep -n "def jira_connect\|JIRA(" src/lit/integrations/jira_push.py
-grep -n "rest_api_version\|get_jira" src/lit/integrations/jira_push.py
-```
-
-#### 3.2. Красный тест
-
-В `tests/test_jira_push.py` (или новый `tests/test_jira_connect.py`)
-добавить тест с моком `jira.JIRA`:
-
-```python
-def test_jira_connect_passes_rest_api_version(self):
-    from unittest.mock import patch
-    from lit.integrations.jira_push import jira_connect
-
-    with patch("lit.integrations.jira_push.JIRA") as mock_jira, \
-         patch("lit.integrations.jira_push.get_jira") as mock_cfg:
-        mock_cfg.return_value = {
-            "url": "https://x.atlassian.net",
-            "login": "u",
-            "pass": "p",
-            "rest_api_version": "3",
-        }
-        jira_connect()
-        _, kwargs = mock_jira.call_args
-        self.assertEqual(
-            kwargs.get("options", {}).get("rest_api_version"), "3"
-        )
-```
-
-Тест красный, потому что `jira_connect` не читает `rest_api_version`.
-
-#### 3.3. Реализация
-
-В `jira_connect`:
-
-```python
-cfg = get_jira()
-options = {"rest_api_version": cfg.get("rest_api_version", "2")}
-return JIRA(server=cfg["url"], basic_auth=(cfg["login"], cfg["pass"]), options=options)
-```
-
-В `config_manager.get_jira()` добавить чтение `rest_api_version` из
-секции `[jira]` (fallback `"2"`).
-
-#### DoD шага 3
-
-- 48 OK (47 + 1), покрытие ≥82%.
-- Тест на `rest_api_version="3"` зелёный; тест на default `"2"` (если
-  добавили) тоже.
-- Smoke: `uv run lit --help / -v / status` → `exit=0`.
-- **Коммит**: `feat(integrations): parameterize jira rest_api_version`
-
----
-
-### Шаг 4: `add_worklog` с ADF для v3 — TDD
-
-**Цель**: при `rest_api_version="3"` `comment` в `add_worklog`
-оборачивается в ADF; при `"2"` остаётся строкой.
-
-#### 4.1. Обследование
-
-```bash
-grep -n "def add_worklog" -A 30 src/lit/integrations/jira_push.py
-```
-
-#### 4.2. Красный тест
-
-```python
-def test_add_worklog_v3_uses_adf(self):
-    from unittest.mock import patch, MagicMock
-    from lit.integrations.jira_push import add_worklog
-
-    jira = MagicMock()
-    jira._options = {"rest_api_version": "3"}
-    with patch.object(jira, "add_worklog") as mock_add:
-        add_worklog(jira, "TASK-1", "4h", "hello", "25.12.2023", "10:00")
-        _, kwargs = mock_add.call_args
-        self.assertIsInstance(kwargs["comment"], dict)
-        self.assertEqual(kwargs["comment"]["type"], "doc")
-
-def test_add_worklog_v2_uses_string(self):
-    # тот же сценарий, rest_api_version="2", comment — str
-```
-
-Красные: сейчас `comment` — всегда строка.
-
-#### 4.3. Реализация
-
-В `add_worklog`:
-
-```python
-version = getattr(jira, "_options", {}).get("rest_api_version", "2")
-comment = plain_text_to_adf(message) if version == "3" else message
-```
-
-(Точный способ получить версию — по результатам spike шага 1; возможно,
-`jira._options` недоступен, тогда передавать версию аргументом из
-`push_entries`.)
-
-#### DoD шага 4
-
-- 50 OK (48 + 2), покрытие ≥82%.
-- v3 → ADF dict, v2 → str.
-- Smoke `exit=0`.
-- **Коммит**: `feat(integrations): use ADF for worklog comment on Jira v3`
-
----
-
-### Шаг 5: `exceptions.py` + отказ от `exit()` — TDD
-
-**Цель**: `jira_connect` поднимает `JiraIntegrationError` вместо
-`exit()`. `cli` ловит `LitError`.
-
-#### 5.1. Обследование
-
-```bash
-grep -n "exit()\|sys.exit" src/lit/integrations/*.py
-grep -n "def jira_connect" -A 20 src/lit/integrations/jira_push.py
-```
-
-#### 5.2. Красный тест
-
-```python
-def test_jira_connect_raises_on_failure(self):
-    from lit.integrations.jira_push import jira_connect
-    from lit.exceptions import JiraIntegrationError
-    with patch("lit.integrations.jira_push.JIRA", side_effect=Exception("boom")):
-        with self.assertRaises(JiraIntegrationError):
-            jira_connect()
-```
-
-Красный: сейчас `jira_connect` делает `exit()`.
-
-#### 5.3. Реализация
-
-Создать `src/lit/exceptions.py`:
-
-```python
-class LitError(Exception): ...
-class JiraIntegrationError(LitError): ...
-class GitLabIntegrationError(LitError): ...
-class ConfigError(LitError): ...
-```
-
-В `jira_connect`: `try: ... except Exception as e: raise JiraIntegrationError(str(e)) from e`.
-В `cli.py`: обернуть вызов команды в `try/except LitError`, вывести в
-`stderr`, `sys.exit(1)`.
-
-#### DoD шага 5
-
-- 51+ OK, покрытие ≥82%.
 - `grep -n "exit()" src/lit/integrations/*.py` → пусто.
+- Новые тесты на исключения.
 - Smoke `exit=0`.
-- **Коммит**: `refactor(integrations): raise LitError instead of exit()`
 
 ---
 
-### Шаг 6: Покрытие сценариев ошибок Jira — TDD
+### Шаг 3: `plain_text_to_adf()`
 
-**Цель**: покрыть пути, которые ломаются при переключении v2↔v3:
-`401`, `404`, timeout, пустой ответ.
+**Цель**: чистая функция конверсии plain text → ADF для worklog comment.
 
-#### 6.1. Красные тесты
+- Создать `src/lit/integrations/adf.py`.
+- Поведение:
+  - пустая строка → `{"type": "doc", "version": 1, "content": []}`;
+  - каждая непустая строка → `paragraph` с одним `text`-узлом;
+  - пустая строка между абзацами → пустой `paragraph`, **без**
+    `{"type": "text", "text": ""}`;
+  - `\r\n` нормализуется, управляющие символы не ломают ADF.
+- Тесты: `tests/test_adf.py` — одна строка, несколько строк, пустые
+  строки, пустой ввод, `\r\n`.
+- **Коммит**: `feat(integrations): add plain_text_to_adf for Jira v3`.
 
-В `tests/test_jira_connect.py` / `test_jira_push.py` добавить по одному
-тесту на каждый сценарий (мок `JIRA`/`requests`):
-- `401` → `JiraIntegrationError` с понятным сообщением;
-- timeout → `JiraIntegrationError`;
-- `load_tasks_from_jira` при ошибке не падает, а возвращает `{}` или
-  поднимает `JiraIntegrationError` (решить по текущему поведению).
+#### DoD
 
-#### DoD шага 6
-
-- 54+ OK, покрытие `jira*.py` выросло (не «85%», а «конкретные пути
-  покрыты»; см. `coverage report -m`).
-- Smoke `exit=0`.
-- **Коммит**: `test(integrations): cover jira error scenarios`
+- Новые тесты зелёные.
+- `plain_text_to_adf("hi")` возвращает валидный ADF.
+- Покрытие `adf.py` — 100%.
 
 ---
 
-## 🔮 Дальнейшие шаги (вне цикла)
+### Шаг 4: `jira_client.py` — единый клиент
 
-- **Сама фича «поддержка Jira v3»**: после цикла — включить `"3"` в
-  конфиге, прогнать на реальном инстансе, обновить README.
-- **GitLab**: проверить, что текущий `integrations/gitlab.py` работает с
-  текущим GitLab (v4 стабилен). Если нет — отдельный маленький цикл.
-- **`cli.py` из `__init__.py`**: после коннектора, с оговоркой про
-  re-export для `patch("lit.X")` (см. `docs/refactoring-log.md`).
-- **`core/models.py`** (`WorklogEntry` dataclass) — отдельный цикл.
+**Цель**: одна точка подключения для pull и push.
 
-## 📚 Уроки с прошлых циклов
+- Создать `src/lit/integrations/jira_client.py`:
+  - `resolve_api_version(cfg, jira=None) -> str`;
+  - `build_jira(cfg=None) -> JIRA`;
+  - `search_all_issues(jira, jql, fields) -> list`;
+  - `format_jira_error(exc) -> str`.
+- Выбор версии:
+  - `[jira] api_version = auto | 2 | 3`, default `auto`;
+  - `auto`: Cloud → `3`, Data Center → `2`;
+  - явный `2` / `3` имеет приоритет;
+  - если v3-клиент на DC падает с `400/404`, fallback на v2.
+- `search_all_issues`:
+  - Cloud: `enhanced_search_issues` с `nextPageToken` или
+    `maxResults=False`;
+  - DC: `search_issues` с `maxResults=False` / `startAt`.
+- Тесты с моками `JIRA`, без сети.
+- **Коммит**: `feat(integrations): add jira client factory with api version`.
 
-Полный список — `docs/refactoring-log.md`. Для этого цикла:
+#### DoD
 
-- **`patch("lit.X")` работает, пока `X` в namespace `lit`** — не
-  переносить `TASKS`/`COMMITS`/`add_worklog` из `__init__.py` в этом
-  цикле.
-- **`git reset --hard` + `git clean -fd`** — опасная пара; откат
-  делать `git checkout . && git clean -fd`.
-- **`uv sync --reinstall-package lit`** — после правок `pyproject.toml`
-  или перемещения файлов.
-- **`echo exit=$?`** на каждой команде; traceback = провал.
-- **`from __future__ import annotations`** — первая строка после
-  docstring.
+- Тесты на `auto`, явные `2`/`3`, fallback.
+- `jira_client.py` покрыт ≥90%.
+- Smoke `exit=0`.
+
+---
+
+### Шаг 5: Push — ADF и `Worklog`
+
+**Цель**: `lit push` корректно работает на v2 и v3.
+
+- `jira_push.py` использует `build_jira()` из `jira_client.py`.
+- `add_worklog()`:
+  - при `api_version == "3"` → `comment = plain_text_to_adf(comment)`;
+  - при `"2"` → строка;
+  - возвращает `str(worklog)` / `worklog.id`, а не объект;
+  - `JIRAError` → `JiraIntegrationError` с понятным сообщением.
+- Тесты:
+  - v2 → `comment` строка;
+  - v3 → `comment` dict с `type == "doc"`;
+  - ошибка `401` / `404` / timeout;
+  - `Worklog` нормализуется в id.
+- **Коммит**: `feat(integrations): use ADF for worklog comment on Jira v3`.
+
+#### DoD
+
+- v2 и v3 тесты зелёные.
+- `jira_push.py` покрыт ≥90%.
+- Smoke `exit=0`.
+
+---
+
+### Шаг 6: Pull — `currentUser()` и пагинация
+
+**Цель**: `lit pull --jira` работает на Cloud и DC.
+
+- `jira.py` использует `build_jira()` и `search_all_issues()`.
+- Убрать `TARGET_USER`:
+  - `assignee = currentUser()`;
+  - `worklogAuthor = currentUser()`;
+  - если `currentUser()` не подходит — email/логин из конфига.
+- Убрать ручной цикл `startAt`.
+- Убрать мёртвый код в `save_commits` / цикле `TASKS`.
+- Ошибки — через `JiraIntegrationError`.
+- Тесты с фейковым клиентом:
+  - Cloud-пагинация;
+  - DC-пагинация;
+  - пустой результат;
+  - ошибка поиска.
+- **Коммит**: `fix(integrations): repair jira pull pagination and currentUser jql`.
+
+#### DoD
+
+- `lit pull --jira` на реальном Cloud возвращает задачи.
+- Нет `NameError` и `startAt`-цикла.
+- `jira.py` покрыт ≥80%.
+- Smoke `exit=0`.
+
+---
+
+### Шаг 7: Конфиг, `init`, CLI-граница, документация
+
+- `config_manager.get_jira()`:
+  - добавить `api_version` (`auto` / `2` / `3`);
+  - `email` как fallback для `login`.
+- `init.py`:
+  - для Cloud — подсказка «email + API token»;
+  - для DC — «login + password/PAT»;
+  - ссылка на создание токена Atlassian.
+- `src/lit/__init__.py`: обработка `LitError` на границе CLI.
+- `README.md`: секция `[jira]`, `api_version`, Cloud/DC auth.
+- `REFACTORING.md`: актуализировать после spike.
+- **Коммит**: `feat(config): add jira api_version and cloud token guidance`.
+
+#### DoD
+
+- `lit init` не ломает существующий конфиг.
+- README соответствует поведению.
+- Smoke `exit=0`.
+
+---
+
+### Шаг 8: Сценарии ошибок + реальный smoke
+
+**Цель**: покрыть пути, которые ломаются при переключении v2↔v3.
+
+- Тесты:
+  - `401` → `JiraIntegrationError` с подсказкой про email/API token;
+  - `403` → нет прав;
+  - `404` → неверный URL/endpoint;
+  - timeout → `JiraIntegrationError`;
+  - пустой ответ поиска → `{}` / пустой список без падения.
+- Реальный smoke:
+  - `lit pull --jira` на Cloud;
+  - `lit push` на тестовой задаче;
+  - проверить комментарий в Jira;
+  - убедиться, что worklog удаляется/не остаётся мусора.
+- **Коммит**: `test(integrations): cover jira error scenarios`.
+
+#### DoD
+
+- Все сценарии покрыты тестами.
+- Реальный pull/push подтверждён.
+- `git status` чистый.
+
+## 8. Что исправлено по сравнению со старой версией плана
+
+- Baseline: **48 тестов / 72%**, а не 44 / 82%.
+- `cli.py` не существует — CLI в `src/lit/__init__.py`.
+- Добавлены `TARGET_USER` и пагинация `startAt` — без них переход
+  бессмысленен: `lit pull` уже сломан.
+- `add_worklog()` возвращает `Worklog`, а не строку.
+- ADF: пустые строки не должны превращаться в пустые `text`-узлы.
+- Убрана работа с `description` — `lit` его не использует.
+- Добавлен единый `jira_client.py` вместо двух копий подключения.
+- Учтено, что `docs/refactoring-log.md` отсутствует.
+
+## 9. Дальнейшие шаги (вне цикла)
+
+- `WorklogEntry` dataclass и разбор `.litstore`.
+- Перенос CLI из `__init__.py` в `cli.py` с сохранением re-export для
+  `patch("lit.X")`.
+- ADF → plain text для чтения комментариев.
+- GitLab: проверить актуальность v4.
+- Auto-update (см. `UPDATE.md`).
