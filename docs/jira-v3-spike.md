@@ -108,6 +108,57 @@ raw worklog comment type: dict
 `PropertyHolder` — это обёртка библиотеки, реальные данные лежат в
 `.raw`.
 
+## Write-test на EFESP-281
+
+Использован сложный комментарий:
+
+```text
+первая строка
+        вторая строка
+
+третья строка: <tag> & "quotes" & 'single'
+эмодзи: 🚀
+```
+
+### ADF
+
+```text
+add_worklog: OK, id = 217800
+read back: OK, comment type = PropertyHolder
+read back raw comment type: dict
+delete: OK
+```
+
+ADF прочитан обратно **без искажений**: сохранились пустой
+`paragraph`, ведущие пробелы, спецсимволы `< > & " '` и эмодзи.
+Пустой `paragraph` (`{"type": "paragraph"}`) Jira принимает.
+
+### Plain string на v3
+
+```text
+add_worklog: FAILED
+JIRAError status=400: INVALID_INPUT
+```
+
+Подтверждено: на v3 `comment` обязан быть ADF. Строка отклоняется.
+
+После теста worklog удалён; в `EFESP-281` осталось 0 worklog'ов.
+
+## Проверка текущей реализации lit
+
+С новым токеном:
+
+| Команда | Результат |
+|---|---|
+| `lit --help` | `exit=0` |
+| `lit -v` | `lit v1.1.0`, `exit=0` |
+| `lit status` | `Нет подготовленных записей`, `exit=0` |
+| `lit pull --jira` | **`NameError: TARGET_USER`**, `exit=1` |
+| `lit push` | работает на v2: worklog `217802` создан и удалён |
+
+То есть текущий push на v2 с plain string пока работает, а pull
+сломан ещё до поиска задач. Это подтверждает необходимость шага 6.
+
 ## Пагинация
 
 Подтверждено: `startAt` на Cloud ломается.
@@ -143,18 +194,20 @@ enhanced_search_issues -> OK, issues: 2
 5. `description` и `comment` в v3 — ADF (`dict`).
 6. `startAt`-пагинация на Cloud не работает.
 7. `enhanced_search_issues` доступен и возвращает результаты.
+8. ADF-комментарий принимается `add_worklog` и читается обратно без
+   искажений.
+9. Plain string на v3 отклоняется с `400 INVALID_INPUT`.
+10. Текущий `lit push` на v2 работает, а `lit pull --jira` падает с
+    `NameError: TARGET_USER`.
 
-## Что ещё нужно проверить
+## Что осталось
 
-- Приём ADF в `add_worklog` на v3 (ожидается `201`).
-- Поведение v3 при plain string в `comment` (ожидается `400`).
-- Создание/удаление тестового worklog через `--write-test`.
-
-Для этого нужна безопасная задача (sandbox), например `TEST-123`.
-Write-test создаёт worklog на 1 минуту и сразу удаляет его.
+- Реализовать шаги 2–8 из `REFACTORING.md`.
+- После исправления pull проверить `lit pull --jira` на реальном
+  инстансе.
+- Проверить `lit push` после перехода на v3 и ADF.
 
 ## Следующий шаг
 
-1. Указать безопасную задачу для `--write-test`.
-2. Проверить ADF и plain string.
-3. Перейти к шагам 2–8 из `REFACTORING.md`.
+Шаг 1 завершён. Переходим к шагу 2 — `src/lit/exceptions.py` и отказ от
+`exit()` в интеграциях.

@@ -30,6 +30,14 @@ JQL_DESCRIPTION = (
     "assignee = currentUser() AND description is not EMPTY ORDER BY updated DESC"
 )
 
+TEST_COMMENT = (
+    "первая строка\n"
+    "        вторая строка\n"
+    "\n"
+    "третья строка: <tag> & \"quotes\" & 'single'\n"
+    "эмодзи: 🚀"
+)
+
 
 def mask(value: str) -> str:
     """Скрыть секрет, оставив только края."""
@@ -236,7 +244,10 @@ def write_test(jira: JIRA, issue_key: str, use_adf: bool) -> None:
     """Создать, прочитать и удалить тестовый worklog."""
     label = "ADF" if use_adf else "plain string"
     print(f"\n=== Write test: {label} -> {issue_key} ===")
-    comment: Any = plain_text_to_adf("lit v3 probe") if use_adf else "lit v3 probe"
+    print("comment text:", repr(TEST_COMMENT))
+    comment: Any = plain_text_to_adf(TEST_COMMENT) if use_adf else TEST_COMMENT
+    if use_adf:
+        print("ADF payload:", short(comment, 1200))
 
     try:
         worklog = jira.add_worklog(
@@ -261,6 +272,9 @@ def write_test(jira: JIRA, issue_key: str, use_adf: bool) -> None:
     else:
         comment_type = type(getattr(fetched, "comment", None)).__name__
         print("read back: OK, comment type =", comment_type)
+        raw_comment = (fetched.raw or {}).get("comment")
+        print("read back raw comment type:", type(raw_comment).__name__)
+        print("read back raw comment sample:", short(raw_comment, 1200))
 
     try:
         worklog.delete()
