@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import os
 import json
 from lit.config_manager import get_jira
+from lit.exceptions import JiraIntegrationError
 
 #TODO В утилсы
 def save_commits(data: dict):
@@ -58,7 +59,7 @@ def load_tasks_from_jira() -> None:
         )
     except exceptions.JIRAError as e:
         pars_error_jira(e)
-        exit()
+        raise JiraIntegrationError(f"Ошибка подключения к Jira: {e}") from e
 
     # Проверка подключения
     try:
@@ -66,7 +67,9 @@ def load_tasks_from_jira() -> None:
         print(f"Авторизованы как: {jira.current_user()}")
     except exceptions.JIRAError as e:
         pars_error_jira(e)
-        exit()
+        raise JiraIntegrationError(
+            f"Ошибка проверки подключения к Jira: {e}"
+        ) from e
 
     # Рассчитываем даты за прошлый месяц
     today = datetime.today()

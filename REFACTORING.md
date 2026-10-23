@@ -121,7 +121,7 @@ uv run lit status; echo "exit=$?"
 
 - [x] Шаг 0: Baseline
 - [x] Шаг 1: Spike-прототип Jira v3 — завершён (ADF OK, string → 400)
-- [ ] Шаг 2: `exceptions.py` + отказ от `exit()`
+- [x] Шаг 2: `exceptions.py` + отказ от `exit()`
 - [ ] Шаг 3: `plain_text_to_adf()`
 - [ ] Шаг 4: `jira_client.py` — единый клиент и выбор версии API
 - [ ] Шаг 5: Push — ADF для v3, нормализация `Worklog`

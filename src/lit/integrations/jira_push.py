@@ -7,6 +7,7 @@ from tzlocal import get_localzone
 import os
 from lit.config_manager import get_jira
 from lit.constants import LIT_DIR
+from lit.exceptions import JiraIntegrationError
 
 os.makedirs(LIT_DIR, exist_ok=True)
 
@@ -15,8 +16,7 @@ def jira_connect() -> JIRA:
     config = get_jira()
     AUTH = (config["login"], config["pass"])
     url = config["url"]
-    days = config["days"]
-    
+
     # Создаем клиент Jira с базовой аутентификацией
     try:
         jira = JIRA(
@@ -30,16 +30,16 @@ def jira_connect() -> JIRA:
             timeout=20
         )
     except Exception as e:
-        print(f"Ошибка подключения: {e}")
-        exit()
+        raise JiraIntegrationError(f"Ошибка подключения к Jira: {e}") from e
 
     # Проверка подключения
     try:
         print(f"Успешное подключение к Jira {jira.server_info()['version']}")
         print(f"Авторизованы как: {jira.current_user()}")
     except Exception as e:
-        print(f"Ошибка проверки подключения: {e}")
-        exit()
+        raise JiraIntegrationError(
+            f"Ошибка проверки подключения к Jira: {e}"
+        ) from e
 
     return jira
 

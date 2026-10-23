@@ -19,6 +19,7 @@ from lit.utils import sort_key, load_dict, safe_split
 from lit.core.worklog_manager import WorklogManager
 
 from lit.config_manager import get_user
+from lit.exceptions import LitError
 from lit.constants import (
     LIT_DIR, LIT_STORE, LIT_HISTORY,
     CONFIG_FILE, COMMITS_FILE, TASKS_FILE,
@@ -272,6 +273,10 @@ def process_arguments(args=None):
 
 def cli() -> None:
     """Entry point for the console script (``lit``)."""
-    process_arguments()
+    try:
+        process_arguments()
+    except LitError as e:
+        print(f"Ошибка: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
