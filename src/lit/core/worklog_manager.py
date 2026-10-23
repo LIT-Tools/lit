@@ -173,7 +173,6 @@ class WorklogManager:
         editor = CUSTOM_EDITOR or os.environ.get('EDITOR') or os.environ.get('VISUAL') or default_editor
         try:
             cmd = [editor, LIT_STORE]
-            print(cmd)
             subprocess.run(cmd, shell=(os.name == 'nt'), check=True, encoding='utf-8')
             self._load()
             print("✓ Изменения применены")
