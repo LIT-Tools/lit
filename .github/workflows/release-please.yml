@@ -3,6 +3,12 @@ name: Release
 on:
   push:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Existing release tag to build and upload assets for
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,9 +17,11 @@ permissions:
 
 jobs:
   test:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/ci.yml
 
   release-please:
+    if: github.event_name == 'push'
     needs: test
     runs-on: ubuntu-latest
     outputs:
@@ -29,7 +37,11 @@ jobs:
 
   build:
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    if: |
+      always() && (
+        (github.event_name == 'push' && needs.release-please.outputs.release_created == 'true') ||
+        (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')
+      )
     name: Build ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -51,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ inputs.tag_name || needs.release-please.outputs.tag_name }}
 
       - name: Setup Python
         uses: actions/setup-python@v7
@@ -88,4 +100,4 @@ jobs:
       - name: Upload release asset
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ needs.release-please.outputs.tag_name }}" "${{ matrix.asset_name }}" --clobber
+        run: gh release upload "${{ inputs.tag_name || needs.release-please.outputs.tag_name }}" "${{ matrix.asset_name }}" --clobber
